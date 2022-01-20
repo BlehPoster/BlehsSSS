@@ -12,15 +12,14 @@ namespace bleh::sss {
 	public:
 		using DataType = std::unordered_map<int32_t, std::shared_ptr<std::vector<int64_t>>>;
 
-		Share_Collector(const DataType& o, int32_t m) : data(o), min(m) {}
-		Share_Collector(DataType&& o, int32_t m) : data(std::move(o)), min(m) {}
+		Share_Collector(const DataType& o, int32_t m) noexcept : data(o), min(m) {}
+		Share_Collector(DataType&& o, int32_t m) noexcept : data(std::move(o)), min(m) {}
 
-		bool is_valid() { return min > 0; }
-		
 		std::vector<std::string> stringify() const;
 
 		static Share_Collector from_strings(const std::vector<std::string>& strings);
 
+		bool is_valid() const;
 		DataType get_raw() const;
 		int32_t get_min() const;
 

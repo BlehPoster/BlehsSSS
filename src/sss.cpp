@@ -8,21 +8,26 @@
 namespace bleh::sss {
     int64_t predefined_prime = static_cast<decltype(predefined_prime)>(powl(2, 31) - 1);
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    int64_t random_number_in_range(int64_t min, int64_t max) {
-        std::uniform_int_distribution<int64_t> distr(min, max);
-        return distr(gen);
-    }
+    class random {
+    public:
+        static int64_t random_number_in_range(int64_t min, int64_t max) {
+            std::uniform_int_distribution<int64_t> distr(min, max);
+            return distr(gen);
+        }
+    private:
+        static std::random_device rd;
+        static std::mt19937 gen;
+        
+    };
+    std::random_device random::rd = std::random_device();
+    std::mt19937 random::gen = std::mt19937(rd());
 
     std::vector<std::pair<int32_t, int64_t>> create_shares(int32_t shares, int32_t min_required_shares, int64_t secret) {
-
         decltype(create_shares(shares, min_required_shares, secret)) result;
-
-        std::vector<decltype(random_number_in_range(0, predefined_prime))> t;
+        std::vector<decltype(random::random_number_in_range(0, predefined_prime))> t;
         t.push_back(secret);
         for (int i = 0; i < min_required_shares - 1; ++i) {
-            auto prng = random_number_in_range(0, predefined_prime - 1);
+            auto prng = random::random_number_in_range(0, predefined_prime - 1);
             t.push_back(prng);
         }
 
@@ -46,8 +51,7 @@ namespace bleh::sss {
         y1 /= gcd;
     }
 
-    void multiply(int64_t& x1, int64_t& y1, int64_t x2, int64_t y2)
-    {
+    void multiply(int64_t& x1, int64_t& y1, int64_t x2, int64_t y2) {
         x1 *= x2;
         y1 *= y2;
         auto gcd = std::gcd(x1, y1);
@@ -55,8 +59,7 @@ namespace bleh::sss {
         y1 /= gcd;
     }
 
-    int64_t reconstruct_from_shares(const std::vector<std::pair<int32_t, int64_t>>& shares, int32_t min)
-    {
+    int64_t reconstruct_from_shares(const std::vector<std::pair<int32_t, int64_t>>& shares, int32_t min) {
         auto x = std::vector<int64_t>();
         auto y = std::vector<int64_t>();
 
@@ -135,20 +138,16 @@ namespace bleh::sss {
                     min = h - '0';
                 }
                 else {
-                    static auto g = [&]() {
+                    static auto g = [&]() -> int64_t {
                         char h, l;
                         iss >> h >> l;
                         std::stringstream tss;
                         tss << std::hex << h << l;
                         int r;
                         tss >> r;
-                        return (int64_t)r;
+                        return r;
                     };
-                    int64_t v = 0;
-                    v |= g();
-                    v |= (g() << 8);
-                    v |= (g() << 16);
-                    v |= (g() << 24);
+                    auto v = g() | (g() << 8) | (g() << 16) | (g() << 24);
                     e->push_back(v);
                 }
                 ++index;
@@ -156,6 +155,10 @@ namespace bleh::sss {
             r[share_index] = e;
         }
         return { r, min };
+    }
+
+    bool Share_Collector::is_valid() const {
+        return min > 0;
     }
 
     Share_Collector::DataType Share_Collector::get_raw() const {
@@ -190,7 +193,6 @@ namespace bleh::sss {
     }
 
     std::string SSS::combine_string(const Share_Collector& shares) {
-
         std::vector<std::pair<int32_t, std::shared_ptr<std::vector<int64_t>>>> prepared;
         
         size_t len = -1;
