@@ -83,21 +83,87 @@ namespace bleh::sss {
         return n;
     }
 
-    Share_Collector::DataType Share_Collector::get() const {
-        return data;
-    }
-
     std::vector<std::string> Share_Collector::stringify() const {
         decltype(stringify()) r;
         for (auto&& e : data) {
+            
             std::stringstream ss;
-            ss << std::hex << e.first;
+            ss << std::hex << 0x01 << e.first << min;
+
             for (auto&& c : *e.second) {
-                ss << c;
+                static auto ins = [&](auto&& x) {
+                    if (x < 0x10) {
+                        ss << '0';
+                    }
+                    ss << x;
+                };
+                ins(c & 0x000000FF);
+                ins((c & 0x0000FF00) >> 8);
+                ins((c & 0x00FF0000) >> 16);
+                ins((c & 0xFF000000) >> 24);
             }
+
             r.push_back(ss.str());
         }
         return r;
+    }
+
+    Share_Collector Share_Collector::from_strings(const std::vector<std::string>& strings) {
+        DataType r;
+        int32_t min = 0;
+        for (auto&& str : strings) {
+            std::istringstream iss(str);
+            int index = 0;
+            char h = 0;
+
+            int32_t share_index = 0;
+            auto e = std::make_shared<std::vector<int64_t>>();
+
+            while (iss) {
+                if (index == 0) {
+                    iss >> std::hex >> h;
+                    if ((h - '0') != 0x01) {
+                        return { {}, 0 };
+                    }
+                }
+                else if (index == 1) {
+                    iss >> h;
+                    share_index = h - '0';
+                }
+                else if(index == 2) {
+                    iss >> h;
+                    min = h - '0';
+                }
+                else {
+                    static auto g = [&]() {
+                        char h, l;
+                        iss >> h >> l;
+                        std::stringstream tss;
+                        tss << std::hex << h << l;
+                        int r;
+                        tss >> r;
+                        return (int64_t)r;
+                    };
+                    int64_t v = 0;
+                    v |= g();
+                    v |= (g() << 8);
+                    v |= (g() << 16);
+                    v |= (g() << 24);
+                    e->push_back(v);
+                }
+                ++index;
+            }
+            r[share_index] = e;
+        }
+        return { r, min };
+    }
+
+    Share_Collector::DataType Share_Collector::get_raw() const {
+        return data;
+    }
+
+    int32_t Share_Collector::get_min() const {
+        return min;
     }
 
     SSS::Shares SSS::share(int32_t secret, int32_t shares, int32_t min) {
@@ -120,15 +186,15 @@ namespace bleh::sss {
                 share_collector[share.first]->push_back(share.second);
             }
         }
-        return share_collector;
+        return { share_collector, min };
     }
 
-    std::string SSS::combine_string(const Share_Collector& shares, int32_t min) {
+    std::string SSS::combine_string(const Share_Collector& shares) {
 
         std::vector<std::pair<int32_t, std::shared_ptr<std::vector<int64_t>>>> prepared;
         
         size_t len = -1;
-        for (auto&& entry : shares.get()) {
+        for (auto&& entry : shares.get_raw()) {
             auto ac_len = entry.second->size();
             if (len > -1 && len != ac_len) {
                 return std::string();
@@ -143,7 +209,7 @@ namespace bleh::sss {
             for (auto&& e : prepared) {
                 t.push_back({ e.first, (*e.second)[i] });
             }
-            result.push_back(static_cast<decltype(result)::value_type>(reconstruct_from_shares(t, min)));
+            result.push_back(static_cast<decltype(result)::value_type>(reconstruct_from_shares(t, shares.get_min())));
         }
         return result;
     }
