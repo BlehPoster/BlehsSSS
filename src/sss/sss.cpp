@@ -1,6 +1,7 @@
 #include "sss.h"
 
-#include <random>
+#include "../common/random.hpp"
+
 #include <numeric>
 #include <unordered_map>
 #include <sstream>
@@ -8,26 +9,12 @@
 namespace bleh::sss {
     int64_t predefined_prime = static_cast<decltype(predefined_prime)>(powl(2, 31) - 1);
 
-    class random {
-    public:
-        static int64_t random_number_in_range(int64_t min, int64_t max) {
-            std::uniform_int_distribution<int64_t> distr(min, max);
-            return distr(gen);
-        }
-    private:
-        static std::random_device rd;
-        static std::mt19937 gen;
-        
-    };
-    std::random_device random::rd = std::random_device();
-    std::mt19937 random::gen = std::mt19937(rd());
-
     std::vector<std::pair<int32_t, int64_t>> create_shares(int32_t shares, int32_t min_required_shares, int64_t secret) {
         decltype(create_shares(shares, min_required_shares, secret)) result;
-        std::vector<decltype(random::random_number_in_range(0, predefined_prime))> t;
+        std::vector<decltype(random::random::random_number_in_range(0, predefined_prime))> t;
         t.push_back(secret);
         for (int i = 0; i < min_required_shares - 1; ++i) {
-            auto prng = random::random_number_in_range(0, predefined_prime - 1);
+            auto prng = random::random::random_number_in_range(0, predefined_prime - 1);
             t.push_back(prng);
         }
 

@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../src/sss.h"
+#include "../src/sss/sss.h"
 
 int main(int argc, const char** argv) {
 
