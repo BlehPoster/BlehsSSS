@@ -7,6 +7,10 @@
 #ifndef C25519_H_
 #define C25519_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include "f25519.h"
 
@@ -44,5 +48,9 @@ extern const uint8_t c25519_base_x[F25519_SIZE];
  * result and q are field elements. e is an exponent.
  */
 void c25519_smult(uint8_t *result, const uint8_t *q, const uint8_t *e);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

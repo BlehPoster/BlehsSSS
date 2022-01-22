@@ -1,10 +1,10 @@
 #include <iostream>
-#include "../src/sss/sss.h"
+#include <sss/sss.h>
+#include <c25519/x_c25519.h>
 
-int main(int argc, const char** argv) {
 
+void test_sss() {
     bleh::sss::SSS sss;
-
     auto shares = sss.share_from_string("this is a longer super secret string 123456789", 4, 2);
 
     auto secret = sss.combine_string(shares);
@@ -24,5 +24,29 @@ int main(int argc, const char** argv) {
     else {
         std::cout << "failed to recreate shares" << std::endl;
     }
-	return 0;
+}
+
+void test_curve25519_shared_secret() {
+    auto a = bleh::c25519::C25519_Private_Key::random();
+    auto A = a.public_key();
+
+    auto b = bleh::c25519::C25519_Private_Key::random();
+    auto B = b.public_key();
+
+    auto ss_a = a.scalar_multiplication_with(B);
+    auto ss_b = b.scalar_multiplication_with(A);
+
+    if (ss_a == ss_b) {
+        std::cout << "created shared secret" << std::endl;
+    }
+    else {
+        std::cout << "failed to created shared secret" << std::endl;
+    }
+}
+
+int main(int argc, const char** argv) {
+    test_sss();
+    test_curve25519_shared_secret();
+
+    return 0;
 }

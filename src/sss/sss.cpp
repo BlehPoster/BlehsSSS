@@ -1,6 +1,6 @@
 #include "sss.h"
 
-#include "../common/random.hpp"
+#include <common/random.hpp>
 
 #include <numeric>
 #include <unordered_map>
@@ -33,17 +33,11 @@ namespace bleh::sss {
     void addition(int64_t& x1, int64_t& y1, int64_t x2, int64_t y2) {
         x1 = x1 * y2 + y1 * x2;
         y1 *= y2;
-        auto gcd = std::gcd(x1, y1);
-        x1 /= gcd;
-        y1 /= gcd;
     }
 
     void multiply(int64_t& x1, int64_t& y1, int64_t x2, int64_t y2) {
         x1 *= x2;
         y1 *= y2;
-        auto gcd = std::gcd(x1, y1);
-        x1 /= gcd;
-        y1 /= gcd;
     }
 
     int64_t reconstruct_from_shares(const std::vector<std::pair<int32_t, int64_t>>& shares, int32_t min) {

@@ -1,4 +1,4 @@
-#include "random.hpp"
+#include <common/random.hpp>
 
 namespace bleh::random {
 	std::random_device random::rd = std::random_device();
