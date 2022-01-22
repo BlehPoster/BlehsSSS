@@ -74,7 +74,7 @@ namespace bleh::sss {
             std::stringstream ss;
             ss << std::hex << 0x01 << e.first << min;
 
-            for (auto&& c : *e.second) {
+            for (auto&& c : e.second) {
                 static auto ins = [&](auto&& x) {
                     if (x < 0x10) {
                         ss << '0';
@@ -101,7 +101,7 @@ namespace bleh::sss {
             char h = 0;
 
             int32_t share_index = 0;
-            auto e = std::make_shared<std::vector<int64_t>>();
+            auto e = std::vector<int64_t>();
 
             while (iss) {
                 if (index == 0) {
@@ -129,7 +129,7 @@ namespace bleh::sss {
                         return r;
                     };
                     auto v = g() | (g() << 8) | (g() << 16) | (g() << 24);
-                    e->push_back(v);
+                    e.push_back(v);
                 }
                 ++index;
             }
@@ -159,26 +159,26 @@ namespace bleh::sss {
     }
 
     Share_Collector SSS::share_from_string(const std::string& secret, int32_t shares, int32_t min) {
-        std::unordered_map<int32_t, std::shared_ptr<std::vector<int64_t>>> share_collector;
+        std::unordered_map<int32_t, std::vector<int64_t>> share_collector;
         for (int i = 1; i <= shares; ++i) {
-            share_collector[i] = std::make_shared<std::vector<int64_t>>();
+            share_collector[i] = std::vector<int64_t>();
         }
 
         for (auto&& c : secret) {
             auto s = create_shares(shares, min, c);
             for (auto&& share : s) {
-                share_collector[share.first]->push_back(share.second);
+                share_collector[share.first].push_back(share.second);
             }
         }
         return { share_collector, min };
     }
 
     std::string SSS::combine_string(const Share_Collector& shares) {
-        std::vector<std::pair<int32_t, std::shared_ptr<std::vector<int64_t>>>> prepared;
+        std::vector<std::pair<int32_t, std::vector<int64_t>>> prepared;
         
         size_t len = -1;
         for (auto&& entry : shares.get_raw()) {
-            auto ac_len = entry.second->size();
+            auto ac_len = entry.second.size();
             if (len > -1 && len != ac_len) {
                 return std::string();
             }
@@ -190,7 +190,7 @@ namespace bleh::sss {
         for (int i = 0; i < len; ++i) {
             std::vector<std::pair<int32_t, int64_t>> t;
             for (auto&& e : prepared) {
-                t.push_back({ e.first, (*e.second)[i] });
+                t.push_back({ e.first, e.second[i] });
             }
             result.push_back(static_cast<decltype(result)::value_type>(reconstruct_from_shares(t, shares.get_min())));
         }

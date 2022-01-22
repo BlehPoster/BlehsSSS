@@ -10,7 +10,7 @@ namespace bleh::sss {
 
 	class Share_Collector {
 	public:
-		using DataType = std::unordered_map<int32_t, std::shared_ptr<std::vector<int64_t>>>;
+		using DataType = std::unordered_map<int32_t, std::vector<int64_t>>;
 
 		Share_Collector(const DataType& o, int32_t m) noexcept : data(o), min(m) {}
 		Share_Collector(DataType&& o, int32_t m) noexcept : data(std::move(o)), min(m) {}
