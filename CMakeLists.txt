@@ -21,10 +21,13 @@ add_library(c25519 STATIC
 add_library(blehsss STATIC
     src/common/random.hpp
     src/common/random.cpp
+    src/common/types.h
     src/sss/sss.h
     src/sss/sss.cpp
     src/c25519/x_c25519.h
     src/c25519/x_c25519.cpp
+    src/ed25519/ed25519.h
+    src/ed25519/ed25519.cpp
 )
 
 add_executable(test

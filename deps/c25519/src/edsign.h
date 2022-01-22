@@ -7,6 +7,10 @@
 #ifndef EDSIGN_H_
 #define EDSIGN_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -47,5 +51,9 @@ void edsign_sign(uint8_t *signature, const uint8_t *pub,
 /* Verify a message signature. Returns non-zero if ok. */
 uint8_t edsign_verify(const uint8_t *signature, const uint8_t *pub,
 		      const uint8_t *message, size_t len);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

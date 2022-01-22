@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sss/sss.h>
 #include <c25519/x_c25519.h>
+#include <ed25519/ed25519.h>
 
 
 void test_sss() {
@@ -24,6 +25,7 @@ void test_sss() {
     else {
         std::cout << "failed to recreate shares" << std::endl;
     }
+    std::cout << "#######" << std::endl;
 }
 
 void test_curve25519_shared_secret() {
@@ -36,17 +38,38 @@ void test_curve25519_shared_secret() {
     auto ss_a = a.scalar_multiplication_with(B);
     auto ss_b = b.scalar_multiplication_with(A);
 
-    if (ss_a == ss_b) {
-        std::cout << "created shared secret" << std::endl;
+    if (ss_a.value == ss_b.value) {
+        std::cout << "successfully created shared secret" << std::endl;
     }
     else {
         std::cout << "failed to created shared secret" << std::endl;
     }
+    std::cout << "#######" << std::endl;
+
+}
+
+void test_ed25519_sign() {
+    auto priv = bleh::ed25519::ED25519_Private_key::random();
+    auto pub = priv.sign_public_key();
+
+    auto test = std::vector<uint8_t>{ 0xFF, 0xAA };
+
+    auto sign = priv.sign(test);
+
+    if (pub.verify(sign, test)) {
+        std::cout << "ed25519 verification success" << std::endl;
+    }
+    else {
+        std::cout << "ed25519 verification failed" << std::endl;
+    }
+    std::cout << "#######" << std::endl;
+
 }
 
 int main(int argc, const char** argv) {
     test_sss();
     test_curve25519_shared_secret();
+    test_ed25519_sign();
 
     return 0;
 }
