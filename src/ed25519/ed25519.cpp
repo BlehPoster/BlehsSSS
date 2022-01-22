@@ -21,8 +21,7 @@ namespace bleh::ed25519 {
 		edsign_sec_to_pub(pub.value.data(), data.value.data());
 		return { pub };
 	}
-
-	
+		
 	ED25519_Signature_Bytes ED25519_Private_key::sign(const std::vector<uint8_t>& message) {
 		ED25519_Signature_Bytes r;
 		auto pub = sign_public_key();

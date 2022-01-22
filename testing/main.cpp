@@ -1,6 +1,6 @@
 #include <iostream>
 #include <sss/sss.h>
-#include <c25519/x_c25519.h>
+#include <c25519/c25519.h>
 #include <ed25519/ed25519.h>
 
 

@@ -24,8 +24,8 @@ add_library(blehsss STATIC
     src/common/types.h
     src/sss/sss.h
     src/sss/sss.cpp
-    src/c25519/x_c25519.h
-    src/c25519/x_c25519.cpp
+    src/c25519/c25519.h
+    src/c25519/c25519.cpp
     src/ed25519/ed25519.h
     src/ed25519/ed25519.cpp
 )

@@ -1,4 +1,4 @@
-#include "x_c25519.h"
+#include "c25519.h"
 
 #include <common/random.hpp>
 
