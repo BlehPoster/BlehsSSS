@@ -6,7 +6,7 @@
 
 void test_sss() {
     bleh::sss::SSS sss;
-    auto shares = sss.share_from_string("this is a longer super secret string 123456789", 4, 2);
+    auto shares = sss.share_from_string("123456789", 4, 2);
 
     auto secret = sss.combine_string(shares);
 

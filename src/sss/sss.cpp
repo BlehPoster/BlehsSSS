@@ -5,16 +5,19 @@
 #include <numeric>
 #include <unordered_map>
 #include <sstream>
+#include <limits>
 
 namespace bleh::sss {
-    int64_t predefined_prime = static_cast<decltype(predefined_prime)>(powl(2, 31) - 1);
 
     std::vector<std::pair<int32_t, int64_t>> create_shares(int32_t shares, int32_t min_required_shares, int64_t secret) {
+        static const constexpr auto min = std::numeric_limits<int32_t>::min();
+        static const constexpr auto max = std::numeric_limits<int32_t>::max();
+
         decltype(create_shares(shares, min_required_shares, secret)) result;
-        std::vector<decltype(random::random::random_number_in_range(0, predefined_prime))> t;
+        std::vector<int64_t> t;
         t.push_back(secret);
         for (int i = 0; i < min_required_shares - 1; ++i) {
-            auto prng = random::random::random_number_in_range(0, predefined_prime - 1);
+            auto prng = random::random::random_number_in_range(min, max);
             t.push_back(prng);
         }
 
