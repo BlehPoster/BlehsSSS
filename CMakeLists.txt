@@ -18,6 +18,12 @@ add_library(c25519 STATIC
     deps/c25519/src/sha512.c
 )
 
+add_library(aes STATIC
+    deps/aes/aes.hpp
+    deps/aes/aes.h
+    deps/aes/aes.c
+)
+
 add_library(blehsss STATIC
     src/common/random.hpp
     src/common/random.cpp
@@ -28,6 +34,8 @@ add_library(blehsss STATIC
     src/c25519/c25519.cpp
     src/ed25519/ed25519.h
     src/ed25519/ed25519.cpp
+    src/ecies/ecies.h
+    src/ecies/ecies.cpp
 )
 
 add_executable(test
@@ -41,4 +49,4 @@ target_compile_features(c25519 PRIVATE cxx_std_17)
 target_compile_features(blehsss PRIVATE cxx_std_17)
 target_compile_features(test PRIVATE cxx_std_17)
 
-target_link_libraries(test PRIVATE blehsss c25519)
+target_link_libraries(test PRIVATE blehsss c25519 aes)

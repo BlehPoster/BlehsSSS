@@ -19,13 +19,13 @@ namespace bleh::c25519 {
 		return { pub };
 	}
 
-	C25519_CX_Bytes C25519_Private_Key::scalar_multiplication_with(const C25519_CX_Bytes& b) {
+	C25519_CX_Bytes C25519_Private_Key::scalar_multiplication_with(const C25519_CX_Bytes& b) const {
 		C25519_CX_Bytes r;
 		c25519_smult(r.value.data(), b.value.data(), data.value.data());
 		return r;
 	}
 
-	C25519_CX_Bytes C25519_Private_Key::scalar_multiplication_with(const C25519_Public_Key& pub) {
+	C25519_CX_Bytes C25519_Private_Key::scalar_multiplication_with(const C25519_Public_Key& pub) const {
 		return scalar_multiplication_with(pub.bytes());
 	}
 

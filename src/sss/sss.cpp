@@ -195,7 +195,7 @@ namespace bleh::sss {
             for (auto&& e : prepared) {
                 t.push_back({ e.first, e.second[i] });
             }
-            result.push_back(static_cast<decltype(result)::value_type>(reconstruct_from_shares(t, shares.get_min())));
+            result.push_back(reconstruct_from_shares(t, shares.get_min()));
         }
         return result;
     }

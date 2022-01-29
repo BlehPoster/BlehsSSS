@@ -31,8 +31,8 @@ namespace bleh::c25519 {
 
 		C25519_Public_Key public_key() const;
 
-		C25519_CX_Bytes scalar_multiplication_with(const C25519_CX_Bytes& b);
-		C25519_CX_Bytes scalar_multiplication_with(const C25519_Public_Key& pub);
+		C25519_CX_Bytes scalar_multiplication_with(const C25519_CX_Bytes& b) const;
+		C25519_CX_Bytes scalar_multiplication_with(const C25519_Public_Key& pub) const;
 
 		static C25519_Private_Key random();
 
