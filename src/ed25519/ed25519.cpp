@@ -13,6 +13,16 @@ namespace bleh::ed25519 {
 		return edsign_verify(signature.value.data(), data.value.data(), message.data(), message.size());
 	}
 
+	std::string ED25519_Public_Key::serialized() {
+		return data.serialize();
+	}
+
+	ED25519_Public_Key ED25519_Public_Key::from_serialized(const std::string& ser) {
+		ED25519_Sign_Secret_Bytes r;
+		r.deserialized(ser);
+		return { r };
+	}
+
 	ED25519_Public_Key ED25519_Private_key::sign_public_key() const {
 		if (data.value.size() != ED25519_key_length) {
 			return { {} };
@@ -29,9 +39,19 @@ namespace bleh::ed25519 {
 		return r;
 	}
 
+	std::string ED25519_Private_key::serialized() {
+		return data.serialize();
+	}
+
 	ED25519_Private_key ED25519_Private_key::random() {
 		ED25519_Scalar_Bytes b = random::random::random_bytes(ED25519_key_length);
 		ed25519_prepare(b.value.data());
 		return { b };
+	}
+
+	ED25519_Private_key ED25519_Private_key::from_serialized(const std::string& ser) {
+		ED25519_Scalar_Bytes r;
+		r.deserialized(ser);
+		return { r };
 	}
 }

@@ -19,6 +19,9 @@ namespace bleh::c25519 {
 
 		C25519_CX_Bytes bytes() const;
 
+		std::string serialized();
+		static C25519_CX_Bytes from_serialized(const std::string&);
+
 	private:
 		C25519_CX_Bytes data;
 	};
@@ -34,7 +37,10 @@ namespace bleh::c25519 {
 		C25519_CX_Bytes scalar_multiplication_with(const C25519_CX_Bytes& b) const;
 		C25519_CX_Bytes scalar_multiplication_with(const C25519_Public_Key& pub) const;
 
+		std::string serialized();
+
 		static C25519_Private_Key random();
+		static C25519_Private_Key from_serialized(const std::string&);
 
 	private:
 		C25519_Scalar_Bytes data;

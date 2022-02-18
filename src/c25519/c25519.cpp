@@ -10,6 +10,16 @@ namespace bleh::c25519 {
 		return data;
 	}
 
+	std::string C25519_Public_Key::serialized() {
+		return data.serialize();
+	}
+
+	C25519_CX_Bytes C25519_Public_Key::from_serialized(const std::string& ser) {
+		C25519_CX_Bytes data;
+		data.deserialized(ser);
+		return { data };
+	}
+
 	C25519_Public_Key C25519_Private_Key::public_key() const {
 		if (data.value.size() != C25519_length) {
 			return { {} };
@@ -29,9 +39,19 @@ namespace bleh::c25519 {
 		return scalar_multiplication_with(pub.bytes());
 	}
 
+	std::string C25519_Private_Key::serialized() {
+		return data.serialize();
+	}
+
 	C25519_Private_Key C25519_Private_Key::random() {
 		C25519_Scalar_Bytes b = random::random::random_bytes(C25519_length);
 		c25519_prepare(b.value.data());
 		return { b };
+	}
+
+	C25519_Private_Key C25519_Private_Key::from_serialized(const std::string& ser) {
+		C25519_Scalar_Bytes data;
+		data.deserialized(ser);
+		return { data };
 	}
 }

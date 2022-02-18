@@ -26,6 +26,9 @@ namespace bleh::ed25519 {
 
 		bool verify(const ED25519_Signature_Bytes& signature, const std::vector<uint8_t>& message);
 
+		std::string serialized();
+		static ED25519_Public_Key from_serialized(const std::string&);
+
 	private:
 		ED25519_Sign_Secret_Bytes data;
 	};
@@ -39,7 +42,10 @@ namespace bleh::ed25519 {
 		ED25519_Public_Key sign_public_key() const;
 		ED25519_Signature_Bytes sign(const std::vector<uint8_t>& message);
 
+		std::string serialized();
+
 		static ED25519_Private_key random();
+		static ED25519_Private_key from_serialized(const std::string&);
 
 	private:
 		ED25519_Scalar_Bytes data;

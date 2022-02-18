@@ -31,7 +31,6 @@ void test_sss() {
     else {
         std::cout << "failed to recreate shares" << std::endl;
     }
-    std::cout << "#######" << std::endl;
 }
 
 void test_curve25519_shared_secret() {
@@ -50,8 +49,30 @@ void test_curve25519_shared_secret() {
     else {
         std::cout << "failed to created shared secret" << std::endl;
     }
-    std::cout << "#######" << std::endl;
+}
 
+void test_curve25519_serialize() {
+    auto a = bleh::c25519::C25519_Private_Key::random();
+    auto A = a.public_key();
+
+    auto b = bleh::c25519::C25519_Private_Key::random();
+    auto B = b.public_key();
+
+    auto ser_a = a.serialized();
+    auto ser_A = A.serialized();
+
+    auto ra = bleh::c25519::C25519_Private_Key::from_serialized(ser_a);
+    auto rA = bleh::c25519::C25519_Public_Key::from_serialized(ser_A);
+
+    auto ss_a = ra.scalar_multiplication_with(B);
+    auto ss_b = b.scalar_multiplication_with(rA);
+
+    if (ss_a.value == ss_b.value) {
+        std::cout << "successfully created shared secret from serialized" << std::endl;
+    }
+    else {
+        std::cout << "failed to created shared secret from serialized" << std::endl;
+    }
 }
 
 void test_ed25519_sign() {
@@ -68,8 +89,27 @@ void test_ed25519_sign() {
     else {
         std::cout << "ed25519 verification failed" << std::endl;
     }
-    std::cout << "#######" << std::endl;
+}
 
+void test_ed25519_serialize() {
+    auto priv = bleh::ed25519::ED25519_Private_key::random();
+    auto s_priv = priv.serialized();
+    auto d_priv = bleh::ed25519::ED25519_Private_key::from_serialized(s_priv);
+    auto pub = priv.sign_public_key();
+
+    auto test = std::vector<uint8_t>{ 0xFF, 0xAA };
+
+    auto sign = d_priv.sign(test);
+
+    auto s_pub = pub.serialized();
+    auto d_pub = bleh::ed25519::ED25519_Public_Key::from_serialized(s_pub);
+
+    if (d_pub.verify(sign, test)) {
+        std::cout << "ed25519 verification success from serialized" << std::endl;
+    }
+    else {
+        std::cout << "ed25519 verification failed from serialized" << std::endl;
+    }
 }
 
 void test_ecies() {
@@ -92,13 +132,19 @@ void test_ecies() {
     else {
         std::cout << "ecies encrypt/decrypt failed" << std::endl;
     }
-    std::cout << "#######" << std::endl;
 }
 
 int main(int argc, const char** argv) {
     test_sss();
+    std::cout << "#######" << std::endl;
     test_curve25519_shared_secret();
+    std::cout << "#######" << std::endl;
+    test_curve25519_serialize();
+    std::cout << "#######" << std::endl;
     test_ed25519_sign();
+    std::cout << "#######" << std::endl;
+    test_ed25519_serialize();
+    std::cout << "#######" << std::endl;
     test_ecies();
 
     return 0;

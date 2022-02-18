@@ -30,6 +30,7 @@ namespace bleh::ecies {
 
 	Ecies Ecies::derive_shared_secret(const c25519::C25519_Private_Key& p, const c25519::C25519_Public_Key& P) {
 		auto bytes = p.scalar_multiplication_with(P);		
+
 		return { std::move(bytes.value) };
 	}
 }
