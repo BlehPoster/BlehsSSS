@@ -44,11 +44,17 @@ add_executable(test
     testing/main.cpp
 )
 
+add_executable(cli
+    src/cli/main.cpp
+)
+
 include_directories(.)
 include_directories(src)
 
 target_compile_features(c25519 PRIVATE cxx_std_17)
 target_compile_features(blehsss PRIVATE cxx_std_17)
 target_compile_features(test PRIVATE cxx_std_17)
+target_compile_features(cli PRIVATE cxx_std_17)
 
 target_link_libraries(test PRIVATE blehsss c25519 aes)
+target_link_libraries(cli PRIVATE blehsss c25519 aes)

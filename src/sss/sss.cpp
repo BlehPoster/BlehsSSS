@@ -33,14 +33,33 @@ namespace bleh::sss {
         return result;
     }
 
+    int64_t gcd(int64_t a, int64_t b)
+    {
+        int temp;
+        while (b != 0)
+        {
+            temp = a % b;
+
+            a = b;
+            b = temp;
+        }
+        return a;
+    }
+
     void addition(int64_t& x1, int64_t& y1, int64_t x2, int64_t y2) {
         x1 = x1 * y2 + y1 * x2;
         y1 *= y2;
+        auto gcd_ = gcd(x1, y1);
+        x1 /= gcd_;
+        y1 /= gcd_;
     }
 
     void multiply(int64_t& x1, int64_t& y1, int64_t x2, int64_t y2) {
         x1 *= x2;
         y1 *= y2;
+        auto gcd_ = gcd(x1, y1);
+        x1 /= gcd_;
+        y1 /= gcd_;
     }
 
     int64_t reconstruct_from_shares(const std::vector<std::pair<int32_t, int64_t>>& shares, int32_t min) {
@@ -60,7 +79,7 @@ namespace bleh::sss {
             int64_t yd = 1;
             for (int o = 0; o < min; ++o) {
                 if (i != o) {
-                    int64_t xn = x[o];
+                    int64_t xn = -x[o];
                     int64_t xd = x[i] - x[o];
                     multiply(yn, yd, xn, xd);
                 }

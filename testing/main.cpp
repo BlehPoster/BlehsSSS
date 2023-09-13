@@ -8,7 +8,7 @@
 
 void test_sss() {
     bleh::sss::SSS sss;
-    auto shares = sss.share_from_string("this is a long string used as secret ->>>>> secret", 3, 2);
+    auto shares = sss.share_from_string("this is a long string used as secret ->>>>> secret", 5, 3);
 
     auto secret = sss.combine_string(shares);
 
@@ -146,6 +146,5 @@ int main(int argc, const char** argv) {
     test_ed25519_serialize();
     std::cout << "#######" << std::endl;
     test_ecies();
-
     return 0;
 }
