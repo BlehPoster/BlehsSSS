@@ -48,20 +48,23 @@ public:
 	std::string command;
 	std::vector<std::string> args;
 };
-#if 0
+
 class BlehSSS_Account {
 public:
-	BlehSSS_Account(const std::string& path, const std::string& name)
-		: m_file_path(path)
-		, m_name(name)
+	BlehSSS_Account(const std::string& name)
+		: m_name(name)
 		, m_curve25519_private_key(bleh::c25519::C25519_Private_Key::random())
 		, m_ed25519_private_key(bleh::ed25519::ED25519_Private_key::random())
 	{ }
 
-	static BlehSSS_Account create(const std::string& path, const std::string& name);
+	static BlehSSS_Account create(const std::string& name);
 
-	void store() {
-
+	std::string serialize() {
+		std::stringstream stream;
+		stream << "name: " << m_name << "\n";
+		stream << "c25519: " << m_curve25519_private_key.serialized() << "\n";
+		stream << "ed25519: " << m_ed25519_private_key.serialized() << "\n";
+		return stream.str();
 	}
 
 	void load() {
@@ -69,17 +72,16 @@ public:
 	}
 
 private:
-	std::string m_file_path;
 	std::string m_name;
 
 	bleh::c25519::C25519_Private_Key m_curve25519_private_key;
 	bleh::ed25519::ED25519_Private_key m_ed25519_private_key;
 };
 
-BlehSSS_Account BlehSSS_Account::create(const std::string& path, const std::string& name) {
-	return BlehSSS_Account(path, name);
+BlehSSS_Account BlehSSS_Account::create(const std::string& name) {
+	return BlehSSS_Account(name);
 }
-#endif
+
 class cli {
 public:
 	cli() = delete;
@@ -138,6 +140,16 @@ public:
 				else {
 					std::cout << "failed to load shares" << std::endl;
 				}
+			}
+		}
+		else if (args.command == "account-create") {
+			auto [name, ok1] = args.get_arg("name");
+			if (ok1) {
+				BlehSSS_Account account(name);
+				std::ofstream file;
+				file.open(std::string("blehsss-account.dat"));
+				file << account.serialize();
+				std::cout << "account created" << std::endl;
 			}
 		}
 		return 0;
