@@ -18,6 +18,8 @@ namespace bleh::common {
 
 		C value;
 
+		auto& raw() { return value; }
+
 		template<typename = std::enable_if_t<std::is_same_v<T, uint8_t>>>
 		std::string serialize() {
 			std::string buffer;

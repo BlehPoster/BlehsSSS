@@ -3,6 +3,10 @@
 
 #include <sss/sss.h>
 
+#include <deps/aes/aes.hpp>
+#include <src/common/random.hpp>
+#include <src/common/base64.h>
+
 #include <iostream>
 #include <algorithm>
 #include <vector>
@@ -131,6 +135,41 @@ public:
 		return { stream.str(), m_name };
 	}
 
+	std::tuple<std::string, std::string> encrypt(const bleh::c25519::C25519_Public_Key& other_public_key, const std::string& content) {
+		auto shared_secret = m_curve25519_private_key.scalar_multiplication_with(other_public_key);
+
+		AES_ctx ctx;
+
+		auto result = content;
+
+		auto iv = bleh::random::random::random_bytes(16);
+		std::string iv_buffer;
+		for (auto&& entry : iv) {
+			iv_buffer.push_back(static_cast<char>(entry));
+		}
+
+		AES_init_ctx_iv(&ctx, shared_secret.raw().data(), iv.data()); // TODO hash
+		AES_CTR_xcrypt_buffer(&ctx, reinterpret_cast<uint8_t*>(result.data()), result.size());
+
+		auto tmp = iv_buffer + result;
+		std::vector<uint8_t> message;
+		for (auto&& entry : tmp) {
+			message.push_back(static_cast<uint8_t>(entry));
+		}
+
+		auto signature = m_ed25519_private_key.sign(message);
+
+		return { base64_encode(tmp), signature.serialize() };
+	}
+
+	auto ed_public_key() {
+		return m_ed25519_private_key.sign_public_key();
+	}
+
+	auto c_public_key() {
+		return m_curve25519_private_key.public_key();
+	}
+
 private:
 	std::string m_name;
 
@@ -181,6 +220,12 @@ public:
 		return m_ed25519_public_key->verify(m_signature, message);
 	}
 
+	auto get_c25519_public_key() const {
+		return m_curve25519_public_key;
+	}
+
+	auto name() const { return m_name; }
+
 private:
 	std::string m_name;
 
@@ -218,6 +263,7 @@ public:
 						std::cout << "share: " << entry << std::endl;
 						file << "\t" << entry << '\n';
 					}
+					file.close();
 				}
 			}
 		}
@@ -256,6 +302,7 @@ public:
 				std::ofstream file;
 				file.open(std::string("blehsss-account.dat"));
 				file << account.serialize();
+				file.close();
 				std::cout << "account created" << std::endl;
 			}
 		}
@@ -266,6 +313,7 @@ public:
 			std::ofstream ofile;
 			ofile.open(std::string("blehsss-account-public-" + name + ".dat"));
 			ofile << static_cast<std::remove_reference_t<decltype(exported)>>(exported);
+			ofile.close();
 			std::cout << "public account exported" << std::endl;
 		}
 		else if (args.command == "account-public-verify") {
@@ -281,6 +329,58 @@ public:
 				}
 			}
 		}
+		else if (args.command == "transportable-share") {
+			auto [public_part, ok1] = args.get_arg("public-part");
+			auto [share_number, ok2] = args.get_arg("share-number");
+			auto [share_file, ok3] = args.get_arg("share-file");
+
+			if (ok1 && ok2 && ok3) {
+				std::string share;
+				auto share_index = atoi(share_number.c_str());
+				std::string line;
+				std::ifstream file(share_file);
+				if (file.is_open())
+				{
+					int index = 1;
+					while (std::getline(file, line)) {
+						if (index == share_index && line.size() > 1 && line[0] == '\t') {
+							share = line.substr(1);
+						}
+					}
+					file.close();
+				}
+				if (!share.empty()) {
+					auto content = load_file_content(public_part);
+					auto account_content = load_file_content("blehsss-account.dat");
+					BlehSSS_Account account(account_content);
+					BlehSSS_Handle handle(content);
+					if (handle.verify()) {
+						auto [ct, signature] = account.encrypt(*handle.get_c25519_public_key(), share);
+						auto enc_ct = base64_encode(ct);
+
+						std::ofstream file;
+						file.open(std::string("encrypted-share-" + handle.name() + ".dat"));
+						file << "name: " << handle.name() << '\n';
+						file << "ct: " << enc_ct << '\n';
+						file << "signature: " << signature << '\n';
+						file << "ed_public_key: " << account.ed_public_key().serialized() << '\n';
+						file << "c_public_key: " << account.c_public_key().serialized() << '\n';
+
+						file.close();
+						std::cout << "share transport ready" << std::endl;
+					}
+				}
+			}
+		}
+#if 0
+		else if (args.command == "share_print") {
+			auto [share_file, ok1] = args.get_arg("share-file");
+			if (ok1) {
+				auto content = load_file_content(share_file);
+
+			}
+		}
+#endif
 		return 0;
 	}
 
@@ -297,6 +397,9 @@ private:
 * account-create --name=bleh
 * account-public-export
 * account-public-verify --name=blehsss-account-public-bleh.dat
+* 
+* transportable-share --public-part=blehsss-account-public-bleh.dat --share-file=shares-1694634804.dat --share-number=1
+* share_print --share-file=encrypted-share-bleh.dat
 * 
 */
 
