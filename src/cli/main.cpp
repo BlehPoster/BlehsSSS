@@ -74,6 +74,7 @@ static const constexpr std::string_view property_ed25519 = "ed25519: ";
 static const constexpr std::string_view property_ed25519_public_key = "ed_public_key: ";
 static const constexpr std::string_view property_c25519_public_key = "c_public_key: ";
 static const constexpr std::string_view property_signature = "signature: ";
+static const constexpr std::string_view property_ct = "ct: ";
 
 class BlehSSS_Account {
 public:
@@ -137,9 +138,6 @@ public:
 
 	std::tuple<std::string, std::string> encrypt(const bleh::c25519::C25519_Public_Key& other_public_key, const std::string& content) {
 		auto shared_secret = m_curve25519_private_key.scalar_multiplication_with(other_public_key);
-
-		AES_ctx ctx;
-
 		auto result = content;
 
 		auto iv = bleh::random::random::random_bytes(16);
@@ -148,10 +146,11 @@ public:
 			iv_buffer.push_back(static_cast<char>(entry));
 		}
 
+		AES_ctx ctx;
 		AES_init_ctx_iv(&ctx, shared_secret.raw().data(), iv.data()); // TODO hash
 		AES_CTR_xcrypt_buffer(&ctx, reinterpret_cast<uint8_t*>(result.data()), result.size());
 
-		auto tmp = iv_buffer + result;
+		auto tmp = base64_encode(iv_buffer + result);
 		std::vector<uint8_t> message;
 		for (auto&& entry : tmp) {
 			message.push_back(static_cast<uint8_t>(entry));
@@ -159,7 +158,21 @@ public:
 
 		auto signature = m_ed25519_private_key.sign(message);
 
-		return { base64_encode(tmp), signature.serialize() };
+		return { tmp, signature.serialize() };
+	}
+
+	std::string decrypt(const bleh::c25519::C25519_Public_Key& other_public_key, const std::string& ct) {
+		auto dec_ct = base64_decode(ct);
+		auto iv = dec_ct.substr(0, 16);
+		auto blob = dec_ct.substr(16);
+
+		auto shared_secret = m_curve25519_private_key.scalar_multiplication_with(other_public_key);
+
+		AES_ctx ctx;
+		AES_init_ctx_iv(&ctx, shared_secret.raw().data(), reinterpret_cast<uint8_t*>(iv.data())); // TODO hash
+		AES_CTR_xcrypt_buffer(&ctx, reinterpret_cast<uint8_t*>(blob.data()), blob.size());
+
+		return blob;
 	}
 
 	auto ed_public_key() {
@@ -232,6 +245,58 @@ private:
 	std::shared_ptr<bleh::c25519::C25519_Public_Key> m_curve25519_public_key;
 	std::shared_ptr<bleh::ed25519::ED25519_Public_Key> m_ed25519_public_key;
 	bleh::ed25519::ED25519_Signature_Bytes m_signature;
+};
+
+class BlehSSS_Share {
+public:
+	BlehSSS_Share(const std::string& serialized)
+	{
+		std::vector<std::string> lines;
+		std::stringstream stream(serialized);
+		std::string buffer;
+		while (getline(stream, buffer, '\n')) {
+			lines.push_back(buffer);
+		}
+
+		for (auto&& entry : lines) {
+
+			if (entry.substr(0, property_name.size()) == property_name) {
+				m_name = entry.substr(property_name.size());
+			}
+			else if (entry.substr(0, property_c25519_public_key.size()) == property_c25519_public_key) {
+				m_curve25519_public_key = std::make_shared<decltype(m_curve25519_public_key)::element_type>(decltype(m_curve25519_public_key)::element_type::from_serialized(entry.substr(property_c25519_public_key.size())));
+			}
+			else if (entry.substr(0, property_ed25519_public_key.size()) == property_ed25519_public_key) {
+				m_ed25519_public_key = std::make_shared<decltype(m_ed25519_public_key)::element_type>(decltype(m_ed25519_public_key)::element_type::from_serialized(entry.substr(property_ed25519_public_key.size())));
+			}
+			else if (entry.substr(0, property_signature.size()) == property_signature) {
+				m_signature.deserialized(entry.substr(property_signature.size()));
+			}
+			else if (entry.substr(0, property_ct.size()) == property_ct) {
+				m_ct = entry.substr(property_ct.size());
+			}
+		}
+	}
+
+	bool verify() {
+		//auto dec_ct = base64_decode(m_ct);
+		std::vector<uint8_t> message;
+		for (auto&& entry : m_ct) {
+			message.push_back(static_cast<uint8_t>(entry));
+		}
+		return m_ed25519_public_key->verify(m_signature, message);
+	}
+
+	auto ct() const { return m_ct; }
+	auto c_public_key() const { return *m_curve25519_public_key; }
+
+private:
+	std::string m_name;
+
+	std::shared_ptr<bleh::c25519::C25519_Public_Key> m_curve25519_public_key;
+	std::shared_ptr<bleh::ed25519::ED25519_Public_Key> m_ed25519_public_key;
+	bleh::ed25519::ED25519_Signature_Bytes m_signature;
+	std::string m_ct;
 };
 
 class cli {
@@ -346,6 +411,7 @@ public:
 						if (index == share_index && line.size() > 1 && line[0] == '\t') {
 							share = line.substr(1);
 						}
+						++index;
 					}
 					file.close();
 				}
@@ -356,15 +422,14 @@ public:
 					BlehSSS_Handle handle(content);
 					if (handle.verify()) {
 						auto [ct, signature] = account.encrypt(*handle.get_c25519_public_key(), share);
-						auto enc_ct = base64_encode(ct);
 
 						std::ofstream file;
 						file.open(std::string("encrypted-share-" + handle.name() + ".dat"));
-						file << "name: " << handle.name() << '\n';
-						file << "ct: " << enc_ct << '\n';
-						file << "signature: " << signature << '\n';
-						file << "ed_public_key: " << account.ed_public_key().serialized() << '\n';
-						file << "c_public_key: " << account.c_public_key().serialized() << '\n';
+						file << property_name << handle.name() << '\n';
+						file << property_ct << ct << '\n';
+						file << property_signature << signature << '\n';
+						file << property_ed25519_public_key << account.ed_public_key().serialized() << '\n';
+						file << property_c25519_public_key << account.c_public_key().serialized() << '\n';
 
 						file.close();
 						std::cout << "share transport ready" << std::endl;
@@ -372,15 +437,19 @@ public:
 				}
 			}
 		}
-#if 0
 		else if (args.command == "share_print") {
 			auto [share_file, ok1] = args.get_arg("share-file");
 			if (ok1) {
+				auto account_content = load_file_content("blehsss-account.dat");
+				BlehSSS_Account account(account_content);
 				auto content = load_file_content(share_file);
-
+				BlehSSS_Share share(content);
+				if (share.verify()) {
+					auto decrypted_share = account.decrypt(share.c_public_key(), share.ct());
+					std::cout << decrypted_share << std::endl;
+				}
 			}
 		}
-#endif
 		return 0;
 	}
 
@@ -392,13 +461,13 @@ private:
 * format: blesss_cli [command] -[args ...]
 * 
 * sss-share --secret="hallo world" --shares=5 --min=2
-* sss-recreate --name=shares-<timestamp>.dat
+* sss-recreate --name=shares-1694723711.dat
 * 
 * account-create --name=bleh
 * account-public-export
 * account-public-verify --name=blehsss-account-public-bleh.dat
 * 
-* transportable-share --public-part=blehsss-account-public-bleh.dat --share-file=shares-1694634804.dat --share-number=1
+* transportable-share --public-part=blehsss-account-public-bleh.dat --share-file=shares-1694723711.dat --share-number=1
 * share_print --share-file=encrypted-share-bleh.dat
 * 
 */
