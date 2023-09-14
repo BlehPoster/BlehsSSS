@@ -49,26 +49,86 @@ public:
 	std::vector<std::string> args;
 };
 
+std::string load_file_content(const std::string& file_name) {
+	std::string line;
+	std::ifstream file(file_name);
+	std::string content;
+	if (file.is_open())
+	{
+		while (std::getline(file, line)) {
+			content.append(line + '\n');
+		}
+		file.close();
+	}
+	return content;
+}
+
+static const constexpr std::string_view property_name = "name: ";
+static const constexpr std::string_view property_c25519 = "c25519: ";
+static const constexpr std::string_view property_ed25519 = "ed25519: ";
+
+static const constexpr std::string_view property_ed25519_public_key = "ed_public_key: ";
+static const constexpr std::string_view property_c25519_public_key = "c_public_key: ";
+static const constexpr std::string_view property_signature = "signature: ";
+
 class BlehSSS_Account {
 public:
-	BlehSSS_Account(const std::string& name)
+	BlehSSS_Account(const std::string& name, bleh::c25519::C25519_Private_Key&& c, bleh::ed25519::ED25519_Private_key&& ed)
 		: m_name(name)
-		, m_curve25519_private_key(bleh::c25519::C25519_Private_Key::random())
-		, m_ed25519_private_key(bleh::ed25519::ED25519_Private_key::random())
+		, m_curve25519_private_key(std::move(c))
+		, m_ed25519_private_key(std::move(ed))
 	{ }
+
+	BlehSSS_Account(const std::string& serialized)
+		: m_curve25519_private_key(decltype(m_curve25519_private_key)::random())
+		, m_ed25519_private_key(decltype(m_ed25519_private_key)::random())
+	{
+		std::vector<std::string> lines;
+		std::stringstream stream(serialized);
+		std::string buffer;
+		while (getline(stream, buffer, '\n')) {
+			lines.push_back(buffer);
+		}
+
+		for (auto&& entry : lines) {
+			
+			if (entry.substr(0, property_name.size()) == property_name) {
+				m_name = entry.substr(property_name.size());
+			}
+			else if (entry.substr(0, property_c25519.size()) == property_c25519) {
+				m_curve25519_private_key = decltype(m_curve25519_private_key)::from_serialized(entry.substr(property_c25519.size()));
+			}
+			else if (entry.substr(0, property_ed25519.size()) == property_ed25519) {
+				m_ed25519_private_key = decltype(m_ed25519_private_key)::from_serialized(entry.substr(property_ed25519.size()));
+			}
+		}
+	}
 
 	static BlehSSS_Account create(const std::string& name);
 
 	std::string serialize() {
 		std::stringstream stream;
-		stream << "name: " << m_name << "\n";
-		stream << "c25519: " << m_curve25519_private_key.serialized() << "\n";
-		stream << "ed25519: " << m_ed25519_private_key.serialized() << "\n";
+		stream << property_name << m_name << "\n";
+		stream << property_c25519 << m_curve25519_private_key.serialized() << "\n";
+		stream << property_ed25519 << m_ed25519_private_key.serialized() << "\n";
 		return stream.str();
 	}
 
-	void load() {
-
+	std::tuple<std::string, std::string> export_public_part() {
+		std::stringstream stream;
+		stream << property_name << m_name << "\n";
+		stream << property_ed25519_public_key << m_ed25519_private_key.sign_public_key().serialized() << "\n";
+		stream << property_c25519_public_key << m_curve25519_private_key.public_key().serialized() << "\n";
+		std::vector<uint8_t> message;
+		for (auto&& entry : m_name) {
+			message.push_back(static_cast<uint8_t>(entry));
+		}
+		for (auto&& entry : m_curve25519_private_key.public_key().serialized()) {
+			message.push_back(static_cast<uint8_t>(entry));
+		}
+		auto signature = m_ed25519_private_key.sign(message);
+		stream << property_signature << signature.serialize() << "\n";
+		return { stream.str(), m_name };
 	}
 
 private:
@@ -79,8 +139,55 @@ private:
 };
 
 BlehSSS_Account BlehSSS_Account::create(const std::string& name) {
-	return BlehSSS_Account(name);
+	return BlehSSS_Account(name, bleh::c25519::C25519_Private_Key::random(), bleh::ed25519::ED25519_Private_key::random());
 }
+
+class BlehSSS_Handle {
+public:
+	BlehSSS_Handle(const std::string& serialized)
+	{
+		std::vector<std::string> lines;
+		std::stringstream stream(serialized);
+		std::string buffer;
+		while (getline(stream, buffer, '\n')) {
+			lines.push_back(buffer);
+		}
+
+		for (auto&& entry : lines) {
+
+			if (entry.substr(0, property_name.size()) == property_name) {
+				m_name = entry.substr(property_name.size());
+			}
+			else if (entry.substr(0, property_c25519_public_key.size()) == property_c25519_public_key) {
+				m_curve25519_public_key = std::make_shared<decltype(m_curve25519_public_key)::element_type>(decltype(m_curve25519_public_key)::element_type::from_serialized(entry.substr(property_c25519_public_key.size())));
+			}
+			else if (entry.substr(0, property_ed25519_public_key.size()) == property_ed25519_public_key) {
+				m_ed25519_public_key = std::make_shared<decltype(m_ed25519_public_key)::element_type>(decltype(m_ed25519_public_key)::element_type::from_serialized(entry.substr(property_ed25519_public_key.size())));
+			}
+			else if (entry.substr(0, property_signature.size()) == property_signature) {
+				m_signature.deserialized(entry.substr(property_signature.size()));
+			}
+		}
+	}
+
+	bool verify() {
+		std::vector<uint8_t> message;
+		for (auto&& entry : m_name) {
+			message.push_back(static_cast<uint8_t>(entry));
+		}
+		for (auto&& entry : m_curve25519_public_key->serialized()) {
+			message.push_back(static_cast<uint8_t>(entry));
+		}
+		return m_ed25519_public_key->verify(m_signature, message);
+	}
+
+private:
+	std::string m_name;
+
+	std::shared_ptr<bleh::c25519::C25519_Public_Key> m_curve25519_public_key;
+	std::shared_ptr<bleh::ed25519::ED25519_Public_Key> m_ed25519_public_key;
+	bleh::ed25519::ED25519_Signature_Bytes m_signature;
+};
 
 class cli {
 public:
@@ -145,11 +252,33 @@ public:
 		else if (args.command == "account-create") {
 			auto [name, ok1] = args.get_arg("name");
 			if (ok1) {
-				BlehSSS_Account account(name);
+				auto account = BlehSSS_Account::create(name);
 				std::ofstream file;
 				file.open(std::string("blehsss-account.dat"));
 				file << account.serialize();
 				std::cout << "account created" << std::endl;
+			}
+		}
+		else if (args.command == "account-public-export") {
+			auto content = load_file_content("blehsss-account.dat");
+			BlehSSS_Account account(content);
+			auto [exported, name] = account.export_public_part();
+			std::ofstream ofile;
+			ofile.open(std::string("blehsss-account-public-" + name + ".dat"));
+			ofile << static_cast<std::remove_reference_t<decltype(exported)>>(exported);
+			std::cout << "public account exported" << std::endl;
+		}
+		else if (args.command == "account-public-verify") {
+			auto [file_name, ok1] = args.get_arg("name");
+			if (ok1) {
+				auto content = load_file_content(file_name);
+				BlehSSS_Handle handle(content);
+				if (handle.verify()) {
+					std::cout << "verify success" << std::endl;
+				}
+				else {
+					std::cout << "verify error" << std::endl;
+				}
 			}
 		}
 		return 0;
@@ -164,6 +293,10 @@ private:
 * 
 * sss-share --secret="hallo world" --shares=5 --min=2
 * sss-recreate --name=shares-<timestamp>.dat
+* 
+* account-create --name=bleh
+* account-public-export
+* account-public-verify --name=blehsss-account-public-bleh.dat
 * 
 */
 
