@@ -1,9 +1,8 @@
 #include <c25519/c25519.h>
 #include <ed25519/ed25519.h>
-
+#include <ecies/ecies.h>
 #include <sss/sss.h>
 
-#include <deps/aes/aes.hpp>
 #include <src/common/random.hpp>
 #include <src/common/base64.h>
 
@@ -137,28 +136,30 @@ public:
 	}
 
 	std::tuple<std::string, std::string> encrypt(const bleh::c25519::C25519_Public_Key& other_public_key, const std::string& content) {
-		auto shared_secret = m_curve25519_private_key.scalar_multiplication_with(other_public_key);
-		auto result = content;
 
-		auto iv = bleh::random::random::random_bytes(16);
-		std::string iv_buffer;
-		for (auto&& entry : iv) {
-			iv_buffer.push_back(static_cast<char>(entry));
+		bleh::ecies::Bytes pt;
+		for (auto&& entry : content) {
+			pt.push_back(entry);
 		}
 
-		AES_ctx ctx;
-		AES_init_ctx_iv(&ctx, shared_secret.raw().data(), iv.data()); // TODO hash
-		AES_CTR_xcrypt_buffer(&ctx, reinterpret_cast<uint8_t*>(result.data()), result.size());
+		auto ecies = bleh::ecies::Ecies::derive_shared_secret(m_curve25519_private_key, other_public_key);
+		auto[ct, iv] = ecies.encrypt(pt);
 
-		auto tmp = base64_encode(iv_buffer + result);
+		std::string buffer;
+		for (auto&& entry : iv.raw()) {
+			buffer.push_back(entry);
+		}
+		for (auto&& entry : ct) {
+			buffer.push_back(entry);
+		}
+
+		auto result = base64_encode(buffer);
 		std::vector<uint8_t> message;
-		for (auto&& entry : tmp) {
+		for (auto&& entry : result) {
 			message.push_back(static_cast<uint8_t>(entry));
 		}
-
 		auto signature = m_ed25519_private_key.sign(message);
-
-		return { tmp, signature.serialize() };
+		return { result, signature.serialize() };
 	}
 
 	std::string decrypt(const bleh::c25519::C25519_Public_Key& other_public_key, const std::string& ct) {
@@ -166,13 +167,23 @@ public:
 		auto iv = dec_ct.substr(0, 16);
 		auto blob = dec_ct.substr(16);
 
-		auto shared_secret = m_curve25519_private_key.scalar_multiplication_with(other_public_key);
+		bleh::ecies::Bytes bct;
+		for (auto&& entry : blob) {
+			bct.push_back(entry);
+		}
+		bleh::ecies::Bytes biv;
+		for (auto&& entry : iv) {
+			biv.push_back(entry);
+		}
 
-		AES_ctx ctx;
-		AES_init_ctx_iv(&ctx, shared_secret.raw().data(), reinterpret_cast<uint8_t*>(iv.data())); // TODO hash
-		AES_CTR_xcrypt_buffer(&ctx, reinterpret_cast<uint8_t*>(blob.data()), blob.size());
+		auto ecies = bleh::ecies::Ecies::derive_shared_secret(m_curve25519_private_key, other_public_key);
+		auto pt = ecies.decrypt(bct, std::move(biv));
 
-		return blob;
+		std::string result;
+		for (auto&& entry : pt) {
+			result.push_back(entry);
+		}
+		return result;
 	}
 
 	auto ed_public_key() {
@@ -279,7 +290,6 @@ public:
 	}
 
 	bool verify() {
-		//auto dec_ct = base64_decode(m_ct);
 		std::vector<uint8_t> message;
 		for (auto&& entry : m_ct) {
 			message.push_back(static_cast<uint8_t>(entry));
