@@ -362,24 +362,29 @@ public:
 		}
 		else if (args.command == "account-create") {
 			auto [name, ok1] = args.get_arg("name");
+			auto [out, ok2] = args.get_arg("out");
 			if (ok1) {
 				auto account = BlehSSS_Account::create(name);
 				std::ofstream file;
-				file.open(std::string("blehsss-account.dat"));
+				file.open(std::string(out));
 				file << account.serialize();
 				file.close();
 				std::cout << "account created" << std::endl;
 			}
 		}
 		else if (args.command == "account-public-export") {
-			auto content = load_file_content("blehsss-account.dat");
-			BlehSSS_Account account(content);
-			auto [exported, name] = account.export_public_part();
-			std::ofstream ofile;
-			ofile.open(std::string("blehsss-account-public-" + name + ".dat"));
-			ofile << static_cast<std::remove_reference_t<decltype(exported)>>(exported);
-			ofile.close();
-			std::cout << "public account exported" << std::endl;
+			auto [account_path, ok1] = args.get_arg("account");
+
+			if (ok1) {
+				auto content = load_file_content(account_path);
+				BlehSSS_Account account(content);
+				auto [exported, name] = account.export_public_part();
+				std::ofstream ofile;
+				ofile.open(std::string("blehsss-account-public-" + name + ".dat"));
+				ofile << static_cast<std::remove_reference_t<decltype(exported)>>(exported);
+				ofile.close();
+				std::cout << "public account exported" << std::endl;
+			}
 		}
 		else if (args.command == "account-public-verify") {
 			auto [file_name, ok1] = args.get_arg("name");
@@ -398,8 +403,9 @@ public:
 			auto [public_part, ok1] = args.get_arg("public-part");
 			auto [share_number, ok2] = args.get_arg("share-number");
 			auto [share_file, ok3] = args.get_arg("share-file");
+			auto [account_path, ok4] = args.get_arg("account");
 
-			if (ok1 && ok2 && ok3) {
+			if (ok1 && ok2 && ok3 && ok4) {
 				std::string share;
 				auto share_index = atoi(share_number.c_str());
 				std::string line;
@@ -408,16 +414,19 @@ public:
 				{
 					int index = 1;
 					while (std::getline(file, line)) {
-						if (index == share_index && line.size() > 1 && line[0] == '\t') {
-							share = line.substr(1);
+						if (line.size() > 1 && line[0] == '\t') {
+							if (index == share_index) {
+								share = line.substr(1);
+								break;
+							}
+							++index;
 						}
-						++index;
 					}
 					file.close();
 				}
 				if (!share.empty()) {
 					auto content = load_file_content(public_part);
-					auto account_content = load_file_content("blehsss-account.dat");
+					auto account_content = load_file_content(account_path);
 					BlehSSS_Account account(account_content);
 					BlehSSS_Handle handle(content);
 					if (handle.verify()) {
@@ -439,8 +448,9 @@ public:
 		}
 		else if (args.command == "share_print") {
 			auto [share_file, ok1] = args.get_arg("share-file");
-			if (ok1) {
-				auto account_content = load_file_content("blehsss-account.dat");
+			auto [account_path, ok2] = args.get_arg("account");
+			if (ok1 && ok2) {
+				auto account_content = load_file_content(account_path);
 				BlehSSS_Account account(account_content);
 				auto content = load_file_content(share_file);
 				BlehSSS_Share share(content);
@@ -460,15 +470,15 @@ private:
 /*
 * format: blesss_cli [command] -[args ...]
 * 
-* sss-share --secret="hallo world" --shares=5 --min=2
-* sss-recreate --name=shares-1694723711.dat
+* .\cli sss-share --secret="hallo world" --shares=5 --min=2
+* .\cli sss-recreate --name=shares-1694790355.dat
 * 
-* account-create --name=bleh
-* account-public-export
-* account-public-verify --name=blehsss-account-public-bleh.dat
+* .\cli account-create --name=bleh --out=data\blehsss-account-bleh.dat
+* .\cli account-public-export --account=data\blehsss-account-bleh.dat
+* .\cli account-public-verify --name=blehsss-account-public-bleh.dat
 * 
-* transportable-share --public-part=blehsss-account-public-bleh.dat --share-file=shares-1694723711.dat --share-number=1
-* share_print --share-file=encrypted-share-bleh.dat
+* .\cli transportable-share --public-part=blehsss-account-public-bleh.dat --share-file=shares-1694798157.dat --share-number=1 --name=blehsss-account-public-bleh.dat --account=data\blehsss-account-bleh.dat
+* .\cli share_print --share-file=encrypted-share-bleh.dat --name=blehsss-account-public-bleh.dat --account=data\blehsss-account-bleh.dat
 * 
 */
 
