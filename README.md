@@ -7,16 +7,34 @@ ECIES is used to securely encrypt and decrypt the shares, adding an extra layer 
 EDDSA is a verification mechanism to verify the validity of the data.
 
 #### Goals
-[x] - ED25519 implementation
-[x] - C25519 implementation
-[x] - ECIES X25519 implementation
-[x] - SSS implementation
-[-] - Unit tests
-[-] - Simple CLI to test functionality
-[-] - ...
+ < ED25519 implementation
+ < C25519 implementation
+ < ECIES X25519 implementation
+ < SSS implementation
+ x Unit tests
+ x Simple CLI to test functionality
+ x ...
 
 #### Usage
-    // TODO
+    blesss_cli [command] --[args ...]
+    
+    // create shares
+    sss-share --secret=<secret> --shares=<number of shares> --min=<min required amount of shares>
+    // recreate from shares
+    sss-recreate --name=<file>.dat
+    
+    // create account
+    account-create --name=<name> --out=data\blehsss-account-<name>.dat
+    // export shareable public account info
+    account-public-export --account=data\blehsss-account-<name>.dat
+    // verify exported account info
+    account-public-verify --name=blehsss-account-public-<name>.dat
+    
+    // encrypt and sign share
+    transportable-share --public-part=blehsss-account-public-<name>.dat --share-file=file.dat --share-number=<number of share> --name=blehsss-account-public-<name>.dat --account=data\blehsss-account-<name>.dat
+    // decrypt and verify share
+    share_print --share-file=encrypted-share-<name>.dat --name=blehsss-account-public-<name>.dat --account=data\blehsss-account-<name>.dat
+    
 
 #### License
 This project is licensed under the MIT License. Feel free to use, modify, and distribute the code as per the terms of this license.
