@@ -38,6 +38,8 @@ add_library(blehsss STATIC
     src/ed25519/ed25519.cpp
     src/ecies/ecies.h
     src/ecies/ecies.cpp
+    src/blehsss.h
+    src/blehsss.cpp
 )
 
 add_executable(test
