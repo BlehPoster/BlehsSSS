@@ -1,20 +1,6 @@
 #include <src/blehsss.h>
 
 namespace bleh {
-	std::string load_file_content(const std::string& file_name) {
-		std::string line;
-		std::ifstream file(file_name);
-		std::string content;
-		if (file.is_open())
-		{
-			while (std::getline(file, line)) {
-				content.append(line + '\n');
-			}
-			file.close();
-		}
-		return content;
-	}
-
 	BlehSSS_Account::BlehSSS_Account(const std::string& name, bleh::c25519::C25519_Private_Key&& c, bleh::ed25519::ED25519_Private_key&& ed)
 		: m_name(name)
 		, m_curve25519_private_key(std::move(c))

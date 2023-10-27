@@ -15,8 +15,6 @@
 #include <fstream>
 
 namespace bleh {
-	std::string load_file_content(const std::string& file_name);
-
 	struct BlehSSS_Common {
 		static const constexpr std::string_view property_name = "name: ";
 		static const constexpr std::string_view property_c25519 = "c25519: ";
@@ -49,8 +47,6 @@ namespace bleh {
 		bleh::c25519::C25519_Private_Key m_curve25519_private_key;
 		bleh::ed25519::ED25519_Private_key m_ed25519_private_key;
 	};
-
-
 
 	class BlehSSS_Handle {
 	public:
@@ -114,19 +110,17 @@ namespace bleh {
 			return account.serialize();
 		}
 
-		static std::tuple<std::string, std::string> account_public_export(const std::string& account_path) {
-			auto content = bleh::load_file_content(account_path);
-			bleh::BlehSSS_Account account(content);
+		static std::tuple<std::string, std::string> account_public_export(const std::string& serialized) {
+			bleh::BlehSSS_Account account(serialized);
 			return account.export_public_part();
 		}
 
-		static bool account_public_verify(const std::string& file_name) {
-			auto content = bleh::load_file_content(file_name);
-			bleh::BlehSSS_Handle handle(content);
+		static bool account_public_verify(const std::string& serialized) {
+			bleh::BlehSSS_Handle handle(serialized);
 			return handle.verify();
 		}
 
-		static std::tuple<bool, std::string, std::string> transportable_share(const std::string& share_file, int share_index, const std::string& public_part, const std::string& account_path) {
+		static std::tuple<bool, std::string, std::string> transportable_share(const std::string& share_file, int share_index, const std::string& public_part, const std::string& account) {
 			std::string share;
 			std::string line;
 			std::ifstream file(share_file);
@@ -148,10 +142,8 @@ namespace bleh {
 				return { false, std::string(), std::string() };
 			}
 			if (!share.empty()) {
-				auto content = bleh::load_file_content(public_part);
-				auto account_content = bleh::load_file_content(account_path);
-				bleh::BlehSSS_Account account(account_content);
-				bleh::BlehSSS_Handle handle(content);
+				bleh::BlehSSS_Account account(account);
+				bleh::BlehSSS_Handle handle(public_part);
 				if (handle.verify()) {
 					auto [ct, signature] = account.encrypt(handle.get_c25519_public_key(), share);
 
@@ -168,11 +160,9 @@ namespace bleh {
 			return { false, std::string(), std::string() };
 		}
 
-		static std::tuple<bool, std::string> decrypt_share(const std::string& account_path, const std::string& share_file) {
-			auto account_content = bleh::load_file_content(account_path);
+		static std::tuple<bool, std::string> decrypt_share(const std::string& account_content, const std::string& share_content) {
 			bleh::BlehSSS_Account account(account_content);
-			auto content = bleh::load_file_content(share_file);
-			bleh::BlehSSS_Share share(content);
+			bleh::BlehSSS_Share share(share_content);
 			if (share.verify()) {
 				return { true, account.decrypt(share.c_public_key(), share.ct()) };
 			}

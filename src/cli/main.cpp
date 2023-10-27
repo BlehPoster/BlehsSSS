@@ -12,16 +12,42 @@
 #include <algorithm>
 #include <vector>
 #include <fstream>
+#include <filesystem>
+
+#ifdef _WIN32
+static constexpr const char path_seperator = '\\';
+#else
+static constexpr const char path_seperator = '/';
+#endif
+
+std::string load_file_content(const std::string& file_name) {
+	std::string line;
+	std::ifstream file(file_name);
+	std::string content;
+	if (file.is_open())
+	{
+		while (std::getline(file, line)) {
+			content.append(line + '\n');
+		}
+		file.close();
+	}
+	return content;
+}
+
+void write_file_content(const std::string& content, const std::string& file_name) {
+	if (auto pos = file_name.find_last_of(path_seperator); pos != std::string::npos) {
+		std::filesystem::create_directories(file_name.substr(0, pos));
+	}
+	std::ofstream file;
+	file.open(file_name);
+	file << content;
+	file.close();
+}
 
 class arg_parser {
 public:
 	arg_parser() = delete;
 	arg_parser(int argc, const char** argv) {
-#ifdef _WIN32
-		static constexpr const char path_seperator = '\\';
-#else
-		static constexpr const char path_seperator = '/';
-#endif
 		for (int i = 0; i < argc; ++i) {
 			raw.push_back(argv[i]);
 			if (i == 0) {
@@ -77,10 +103,7 @@ public:
 
 				auto[success, out] = bleh::BlehSSS::create_shares(secret, nshares, nmin);
 				if (success) {
-					std::ofstream file;
-					file.open(out_file);
-					file << out;
-					file.close();
+					write_file_content(out, out_file);
 				}
 				else {
 					log("failed to create shares");
@@ -91,7 +114,7 @@ public:
 			}
 		}
 		else if (args.command == "sss-recreate") {
-			auto [file_name, ok1] = args.get_arg("name");
+			auto [file_name, ok1] = args.get_arg("out");
 
 			if (ok1) {
 				std::string line;
@@ -120,10 +143,7 @@ public:
 			auto [out, ok2] = args.get_arg("out");
 			if (ok1) {
 				auto serialized = bleh::BlehSSS::create_account(name);
-				std::ofstream file;
-				file.open(out);
-				file << serialized;
-				file.close();
+				write_file_content(serialized, out);
 				log("account created");
 			}
 		}
@@ -132,18 +152,17 @@ public:
 			auto [out, ok2] = args.get_arg("out");
 
 			if (ok1 && ok2) {
-				auto [exported, name] = bleh::BlehSSS::account_public_export(account_path);
-				std::ofstream ofile;
-				ofile.open(out);
-				ofile << static_cast<std::remove_reference_t<decltype(exported)>>(exported);
-				ofile.close();
+				auto content = load_file_content(account_path);
+				auto [exported, name] = bleh::BlehSSS::account_public_export(content);
+				write_file_content(static_cast<std::remove_reference_t<decltype(exported)>>(exported), out);
 				log("public account exported");
 			}
 		}
 		else if (args.command == "account-public-verify") {
-			auto [file_name, ok1] = args.get_arg("name");
+			auto [file_name, ok1] = args.get_arg("public");
 			if (ok1) {
-				if (bleh::BlehSSS::account_public_verify(file_name)) {
+				auto content = load_file_content(file_name);
+				if (bleh::BlehSSS::account_public_verify(content)) {
 					log("verify success");
 				}
 				else {
@@ -160,13 +179,10 @@ public:
 
 			if (ok1 && ok2 && ok3 && ok4 && ok5) {
 				auto share_index = atoi(share_number.c_str());
-				auto [ok, out, name] = bleh::BlehSSS::transportable_share(share_file, share_index, public_part, account_path);
+				auto [ok, out, name] = bleh::BlehSSS::transportable_share(share_file, share_index, load_file_content(public_part), load_file_content(account_path));
 
 				if (ok) {
-					std::ofstream file;
-					file.open(out_file);
-					file << out;
-					file.close();
+					write_file_content(out, out_file);
 					log("wrote file");
 				}
 				else {
@@ -178,7 +194,7 @@ public:
 			auto [share_file, ok1] = args.get_arg("share-file");
 			auto [account_path, ok2] = args.get_arg("account");
 			if (ok1 && ok2) {
-				auto[ok, secret] = bleh::BlehSSS::decrypt_share(account_path, share_file);
+				auto[ok, secret] = bleh::BlehSSS::decrypt_share(load_file_content(account_path), load_file_content(share_file));
 				if (ok) {
 					log("Secret: " + secret);
 				}
@@ -194,21 +210,6 @@ public:
 private:
 	arg_parser args;
 };
-
-/*
-* format: blesss_cli [command] -[args ...]
-* 
-* .\cli sss-share --secret="hallo world" --shares=5 --min=2 --out=data\shares.dat
-* .\cli sss-recreate --name=data\shares.dat
-* 
-* .\cli account-create --name=bleh --out=data\blehsss-account-bleh.dat
-* .\cli account-public-export --account=data\blehsss-account-bleh.dat --out=data\blehsss-account-public-bleh.dat
-* .\cli account-public-verify --name=data\blehsss-account-public-bleh.dat
-* 
-* .\cli transportable-share --public-part=data\blehsss-account-public-bleh.dat --share-file=shares.dat --share-number=1 --account=data\blehsss-account-bleh.dat --out=data\encrypted-share-bleh.dat
-* .\cli share_print --share-file=data\encrypted-share-bleh.dat --name=data\blehsss-account-public-bleh.dat --account=data\blehsss-account-bleh.dat
-* 
-*/
 
 int main(int argc, const char** argv) {
 	cli c(argc, argv);
