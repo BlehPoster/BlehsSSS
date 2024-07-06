@@ -7,13 +7,13 @@ ECIES is used to securely encrypt and decrypt the shares, adding an extra layer 
 EDDSA is a verification mechanism to verify the validity of the data.
 
 #### Goals
- < ED25519 implementation
- < C25519 implementation
- < ECIES X25519 implementation
- < SSS implementation
- < Simple CLI to test functionality
- x Unit tests
- x ...
+ [x] ED25519 implementation  
+ [x] C25519 implementation  
+ [x] ECIES X25519 implementation  
+ [x] SSS implementation  
+ [x] Simple CLI to test functionality  
+ [ ] Unit tests  
+ [ ] ...  
 
 #### Usage
     blesss_cli [command] --[args ...]
