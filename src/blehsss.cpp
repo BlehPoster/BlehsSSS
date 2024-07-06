@@ -1,5 +1,7 @@
 #include <blehsss.h>
 
+#include <common/base64.h>
+
 namespace bleh {
 
 	const std::vector<std::string_view> BlehSSS_Common::supported_export_version = { "0.1" };
@@ -95,7 +97,7 @@ namespace bleh {
 			buffer.push_back(entry);
 		}
 
-		auto result = base64_encode(buffer);
+		auto result = common::Base64::encode(buffer);
 		std::vector<uint8_t> message;
 		for (auto&& entry : result) {
 			message.push_back(static_cast<uint8_t>(entry));
@@ -105,7 +107,7 @@ namespace bleh {
 	}
 
 	std::string BlehSSS_Account::decrypt(const bleh::c25519::C25519_Public_Key& other_public_key, const std::string& ct) {
-		auto dec_ct = base64_decode(ct);
+		auto dec_ct = common::Base64::decode(ct);
 		auto iv = dec_ct.substr(0, 16);
 		auto blob = dec_ct.substr(16);
 

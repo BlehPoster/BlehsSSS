@@ -1,11 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(blehsss)
 
-add_library(base64 STATIC
-    deps/base64/base64.h
-    deps/base64/base64.cpp
-)
-
 add_library(c25519 STATIC
     deps/c25519/src/c25519.h
     deps/c25519/src/c25519.c
@@ -33,6 +28,10 @@ add_library(blehsss STATIC
     src/common/random.hpp
     src/common/random.cpp
     src/common/types.h
+    src/common/base64.h
+    src/common/base64.cpp
+    src/common/sha.h
+    src/common/sha.cpp
     src/sss/sss.h
     src/sss/sss.cpp
     src/c25519/c25519.h
@@ -53,15 +52,19 @@ add_executable(cli
     src/cli/main.cpp
 )
 
+find_package(ZLIB REQUIRED  HINTS build/generators)
+find_package(OpenSSL REQUIRED HINTS build/generators)
+
 include_directories(.)
 include_directories(src)
 include_directories(deps/)
 
-target_compile_features(base64 PRIVATE cxx_std_17)
 target_compile_features(c25519 PRIVATE cxx_std_17)
+target_compile_features(aes PRIVATE cxx_std_17)
 target_compile_features(blehsss PRIVATE cxx_std_17)
 target_compile_features(test PRIVATE cxx_std_17)
 target_compile_features(cli PRIVATE cxx_std_17)
 
-target_link_libraries(test PRIVATE blehsss base64 c25519 aes)
-target_link_libraries(cli PRIVATE blehsss base64 c25519 aes)
+target_link_libraries(blehsss PRIVATE c25519 aes ZLIB::ZLIB openssl::openssl)
+target_link_libraries(test PRIVATE blehsss c25519 aes ZLIB::ZLIB openssl::openssl)
+target_link_libraries(cli PRIVATE blehsss c25519 aes ZLIB::ZLIB openssl::openssl)

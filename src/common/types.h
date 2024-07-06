@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base64/base64.h>
+#include <common/base64.h>
 
 #include <vector>
 #include <sstream>
@@ -24,12 +24,12 @@ namespace bleh::common {
 		std::string serialize() {
 			std::string buffer;
 			std::copy(value.begin(), value.end(), std::back_inserter(buffer));
-			return base64_encode(buffer);
+			return Base64::encode(buffer);
 		}
 
 		template<typename = std::enable_if_t<std::is_same_v<T, uint8_t>>>
 		void deserialized(const std::string& data) {
-			auto buffer = base64_decode(data);
+			auto buffer = Base64::decode(data);
 			if (buffer.size() == len) {
 				std::copy(buffer.begin(), buffer.end(), value.begin());
 			}

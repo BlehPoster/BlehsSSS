@@ -6,7 +6,6 @@
 #include <sss/sss.h>
 
 #include <common/random.hpp>
-#include <base64/base64.h>
 
 #include <string>
 #include <iostream>

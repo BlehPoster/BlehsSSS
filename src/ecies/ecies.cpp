@@ -1,6 +1,7 @@
 #include <ecies/ecies.h>
 
 #include <common/random.hpp>
+#include <common/sha.h>
 
 #include <aes/aes.hpp>
 
@@ -30,7 +31,7 @@ namespace bleh::ecies {
 
 	Ecies Ecies::derive_shared_secret(const c25519::C25519_Private_Key& p, const c25519::C25519_Public_Key& P) {
 		auto bytes = p.scalar_multiplication_with(P);		
-
-		return { std::move(bytes.value) };
+		auto sc = common::Sha2::sha256(bytes.value);
+		return { std::move(sc) };
 	}
 }
