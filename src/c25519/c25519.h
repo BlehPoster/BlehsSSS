@@ -2,7 +2,7 @@
 
 #include <common/types.h>
 
-#include <deps/c25519/src/c25519.h>
+#include <c25519/src/c25519.h>
 #include <vector>
 
 namespace bleh::c25519 {

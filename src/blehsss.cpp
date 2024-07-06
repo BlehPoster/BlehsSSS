@@ -1,14 +1,28 @@
-#include <src/blehsss.h>
+#include <blehsss.h>
 
 namespace bleh {
+
+	const std::vector<std::string_view> BlehSSS_Common::supported_export_version = { "0.1" };
+
+	bool BlehSSS_Common::is_supported_export_version(const std::string& version) {
+		for (auto&& entry : supported_export_version) {
+			if (entry == version) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	BlehSSS_Account::BlehSSS_Account(const std::string& name, bleh::c25519::C25519_Private_Key&& c, bleh::ed25519::ED25519_Private_key&& ed)
-		: m_name(name)
+		: m_version(BlehSSS_Common::export_version)
+		, m_name(name)
 		, m_curve25519_private_key(std::move(c))
 		, m_ed25519_private_key(std::move(ed))
 	{ }
 
 	BlehSSS_Account::BlehSSS_Account(const std::string& serialized)
-		: m_curve25519_private_key(decltype(m_curve25519_private_key)::random())
+		: m_version("0.0")
+		, m_curve25519_private_key(decltype(m_curve25519_private_key)::random())
 		, m_ed25519_private_key(decltype(m_ed25519_private_key)::random())
 	{
 		std::vector<std::string> lines;
@@ -19,8 +33,10 @@ namespace bleh {
 		}
 
 		for (auto&& entry : lines) {
-
-			if (entry.substr(0, bleh::BlehSSS_Common::property_name.size()) == bleh::BlehSSS_Common::property_name) {
+			if (entry.substr(0, bleh::BlehSSS_Common::property_version.size()) == bleh::BlehSSS_Common::property_version) {
+				m_version = entry.substr(bleh::BlehSSS_Common::property_version.size());
+			}
+			else if (entry.substr(0, bleh::BlehSSS_Common::property_name.size()) == bleh::BlehSSS_Common::property_name) {
 				m_name = entry.substr(bleh::BlehSSS_Common::property_name.size());
 			}
 			else if (entry.substr(0, bleh::BlehSSS_Common::property_c25519.size()) == bleh::BlehSSS_Common::property_c25519) {
@@ -32,16 +48,20 @@ namespace bleh {
 		}
 	}
 
-	std::string BlehSSS_Account::serialize() {
+	std::tuple<std::string, BlehSSS_Error> BlehSSS_Account::serialize() {
+		if (BlehSSS_Common::is_supported_export_version(m_version)) {
+			return { std::string(), BlehSSS_Error("unsupported version") };
+		}
 		std::stringstream stream;
 		stream << bleh::BlehSSS_Common::property_name << m_name << "\n";
 		stream << bleh::BlehSSS_Common::property_c25519 << m_curve25519_private_key.serialized() << "\n";
 		stream << bleh::BlehSSS_Common::property_ed25519 << m_ed25519_private_key.serialized() << "\n";
-		return stream.str();
+		return { stream.str(), BlehSSS_Error() };
 	}
 
 	std::tuple<std::string, std::string> BlehSSS_Account::export_public_part() {
 		std::stringstream stream;
+		stream << bleh::BlehSSS_Common::property_version << BlehSSS_Common::export_version << "\n";
 		stream << bleh::BlehSSS_Common::property_name << m_name << "\n";
 		stream << bleh::BlehSSS_Common::property_ed25519_public_key << m_ed25519_private_key.sign_public_key().serialized() << "\n";
 		stream << bleh::BlehSSS_Common::property_c25519_public_key << m_curve25519_private_key.public_key().serialized() << "\n";
@@ -130,8 +150,10 @@ namespace bleh {
 		}
 
 		for (auto&& entry : lines) {
-
-			if (entry.substr(0, bleh::BlehSSS_Common::property_name.size()) == bleh::BlehSSS_Common::property_name) {
+			if (entry.substr(0, bleh::BlehSSS_Common::property_version.size()) == bleh::BlehSSS_Common::property_version) {
+				m_version = entry.substr(bleh::BlehSSS_Common::property_version.size());
+			}
+			else if (entry.substr(0, bleh::BlehSSS_Common::property_name.size()) == bleh::BlehSSS_Common::property_name) {
 				m_name = entry.substr(bleh::BlehSSS_Common::property_name.size());
 			}
 			else if (entry.substr(0, bleh::BlehSSS_Common::property_c25519_public_key.size()) == bleh::BlehSSS_Common::property_c25519_public_key) {
@@ -173,8 +195,10 @@ namespace bleh {
 		}
 
 		for (auto&& entry : lines) {
-
-			if (entry.substr(0, bleh::BlehSSS_Common::property_name.size()) == bleh::BlehSSS_Common::property_name) {
+			if (entry.substr(0, bleh::BlehSSS_Common::property_version.size()) == bleh::BlehSSS_Common::property_version) {
+				m_version = entry.substr(bleh::BlehSSS_Common::property_version.size());
+			}
+			else if (entry.substr(0, bleh::BlehSSS_Common::property_name.size()) == bleh::BlehSSS_Common::property_name) {
 				m_name = entry.substr(bleh::BlehSSS_Common::property_name.size());
 			}
 			else if (entry.substr(0, bleh::BlehSSS_Common::property_c25519_public_key.size()) == bleh::BlehSSS_Common::property_c25519_public_key) {
@@ -202,4 +226,90 @@ namespace bleh {
 
 	std::string BlehSSS_Share::ct() const { return m_ct; }
 	bleh::c25519::C25519_Public_Key BlehSSS_Share::c_public_key() const { return *m_curve25519_public_key; }
+
+	std::tuple<bool, std::string> BlehSSS::create_shares(const std::string& secret, int shares, int min) {
+		bleh::sss::SSS sss;
+		auto result = sss.share_from_string(secret, shares, min);
+		if (result.is_valid()) {
+			std::stringstream stream;
+			stream << "shares:\n";
+			for (auto&& entry : result.stringify()) {
+				std::cout << "share: " << entry << std::endl;
+				stream << "\t" << entry << '\n';
+			}
+			return { true, stream.str() };
+		}
+		return { false, std::string() };
+	}
+
+	std::string BlehSSS::recreate_shares(const std::vector<std::string>& list) {
+		auto remade = bleh::sss::Share_Collector::from_strings(list);
+		bleh::sss::SSS sss;
+		return sss.combine_string(remade);
+	}
+
+	std::tuple<std::string, BlehSSS_Error> BlehSSS::create_account(const std::string& name) {
+		auto account = bleh::BlehSSS_Account::create(name);
+		return account.serialize();
+	}
+
+	std::tuple<std::string, std::string> BlehSSS::account_public_export(const std::string& serialized) {
+		bleh::BlehSSS_Account account(serialized);
+		return account.export_public_part();
+	}
+
+	bool BlehSSS::account_public_verify(const std::string& serialized) {
+		bleh::BlehSSS_Handle handle(serialized);
+		return handle.verify();
+	}
+
+	std::tuple<bool, std::string, std::string> BlehSSS::transportable_share(const std::string& share_file, int share_index, const std::string& public_part, const std::string& account) {
+		std::string share;
+		std::string line;
+		std::ifstream file(share_file);
+		if (file.is_open())
+		{
+			int index = 1;
+			while (std::getline(file, line)) {
+				if (line.size() > 1 && line[0] == '\t') {
+					if (index == share_index) {
+						share = line.substr(1);
+						break;
+					}
+					++index;
+				}
+			}
+			file.close();
+		}
+		else {
+			return { false, std::string(), std::string() };
+		}
+		if (!share.empty()) {
+			bleh::BlehSSS_Account account(account);
+			bleh::BlehSSS_Handle handle(public_part);
+			if (handle.verify()) {
+				auto [ct, signature] = account.encrypt(handle.get_c25519_public_key(), share);
+
+				std::stringstream stream;
+				stream << bleh::BlehSSS_Common::property_version << BlehSSS_Common::export_version << '\n';
+				stream << bleh::BlehSSS_Common::property_name << handle.name() << '\n';
+				stream << bleh::BlehSSS_Common::property_ct << ct << '\n';
+				stream << bleh::BlehSSS_Common::property_signature << signature << '\n';
+				stream << bleh::BlehSSS_Common::property_ed25519_public_key << account.ed_public_key().serialized() << '\n';
+				stream << bleh::BlehSSS_Common::property_c25519_public_key << account.c_public_key().serialized() << '\n';
+
+				return { true, stream.str(), handle.name() };
+			}
+		}
+		return { false, std::string(), std::string() };
+	}
+
+	std::tuple<bool, std::string> BlehSSS::decrypt_share(const std::string& account_content, const std::string& share_content) {
+		bleh::BlehSSS_Account account(account_content);
+		bleh::BlehSSS_Share share(share_content);
+		if (share.verify()) {
+			return { true, account.decrypt(share.c_public_key(), share.ct()) };
+		}
+		return { false, std::string() };
+	}
 }

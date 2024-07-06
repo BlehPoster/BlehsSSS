@@ -1,7 +1,7 @@
 #pragma once
 
-#include <deps/c25519/src/ed25519.h>
-#include <deps/c25519/src/edsign.h>
+#include <c25519/src/ed25519.h>
+#include <c25519/src/edsign.h>
 
 #include <common/types.h>
 

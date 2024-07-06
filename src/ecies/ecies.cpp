@@ -2,7 +2,7 @@
 
 #include <common/random.hpp>
 
-#include <deps/aes/aes.hpp>
+#include <aes/aes.hpp>
 
 namespace bleh::ecies {
 	void xcrypt_ctr(uint8_t* buf, size_t len, uint8_t* secret, uint8_t* iv) {

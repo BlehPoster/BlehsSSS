@@ -2,7 +2,7 @@
 
 #include <common/random.hpp>
 
-#include <deps/c25519/src/c25519.h>
+#include <c25519/src/c25519.h>
 
 namespace bleh::c25519 {
 

@@ -3,8 +3,8 @@
 #include <ecies/ecies.h>
 #include <sss/sss.h>
 
-#include <src/common/random.hpp>
-#include <src/common/base64.h>
+#include <common/random.hpp>
+#include <base64/base64.h>
 
 #include <src/blehsss.h>
 
@@ -142,9 +142,14 @@ public:
 			auto [name, ok1] = args.get_arg("name");
 			auto [out, ok2] = args.get_arg("out");
 			if (ok1) {
-				auto serialized = bleh::BlehSSS::create_account(name);
-				write_file_content(serialized, out);
-				log("account created");
+				auto [serialized, error] = bleh::BlehSSS::create_account(name);
+				if (error) {
+					log(error.msg());
+				}
+				else {
+					write_file_content(serialized, out);
+					log("account created");
+				}
 			}
 		}
 		else if (args.command == "account-public-export") {
@@ -201,7 +206,6 @@ public:
 				else {
 					log("failed to decrypt secret");
 				}
-				
 			}
 		}
 		return 0;

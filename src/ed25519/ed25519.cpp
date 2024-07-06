@@ -2,7 +2,7 @@
 
 #include <common/random.hpp>
 
-#include <deps/c25519/src/edsign.h>
+#include <c25519/src/edsign.h>
 
 namespace bleh::ed25519 {
 	ED25519_Sign_Secret_Bytes ED25519_Public_Key::bytes() const {

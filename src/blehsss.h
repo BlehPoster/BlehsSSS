@@ -5,8 +5,8 @@
 #include <ecies/ecies.h>
 #include <sss/sss.h>
 
-#include <src/common/random.hpp>
-#include <src/common/base64.h>
+#include <common/random.hpp>
+#include <base64/base64.h>
 
 #include <string>
 #include <iostream>
@@ -16,6 +16,7 @@
 
 namespace bleh {
 	struct BlehSSS_Common {
+		static const constexpr std::string_view property_version = "version: ";
 		static const constexpr std::string_view property_name = "name: ";
 		static const constexpr std::string_view property_c25519 = "c25519: ";
 		static const constexpr std::string_view property_ed25519 = "ed25519: ";
@@ -24,6 +25,23 @@ namespace bleh {
 		static const constexpr std::string_view property_c25519_public_key = "c_public_key: ";
 		static const constexpr std::string_view property_signature = "signature: ";
 		static const constexpr std::string_view property_ct = "ct: ";
+
+		static const constexpr std::string_view export_version = "0.1";
+		static const std::vector<std::string_view> supported_export_version;
+
+		static bool is_supported_export_version(const std::string& version);
+	};
+
+	class BlehSSS_Error {
+	public:
+		BlehSSS_Error() = default;
+		BlehSSS_Error(const std::string& msg) : m_msg(msg) { }
+
+		operator bool() { return !m_msg.empty(); }
+		auto msg() const { return m_msg; }
+
+	private:
+		std::string m_msg;
 	};
 
 	class BlehSSS_Account {
@@ -33,7 +51,7 @@ namespace bleh {
 
 		static BlehSSS_Account create(const std::string& name);
 
-		std::string serialize();
+		std::tuple<std::string, BlehSSS_Error> serialize();
 		std::tuple<std::string, std::string> export_public_part();
 		std::tuple<std::string, std::string> encrypt(const bleh::c25519::C25519_Public_Key& other_public_key, const std::string& content);
 		std::string decrypt(const bleh::c25519::C25519_Public_Key& other_public_key, const std::string& ct);
@@ -42,6 +60,7 @@ namespace bleh {
 		bleh::c25519::C25519_Public_Key c_public_key();
 
 	private:
+		std::string m_version;
 		std::string m_name;
 
 		bleh::c25519::C25519_Private_Key m_curve25519_private_key;
@@ -50,6 +69,7 @@ namespace bleh {
 
 	class BlehSSS_Handle {
 	public:
+		BlehSSS_Handle() = delete;
 		BlehSSS_Handle(const std::string& serialized);
 
 		bool verify();
@@ -57,6 +77,7 @@ namespace bleh {
 		std::string name() const;
 
 	private:
+		std::string m_version;
 		std::string m_name;
 
 		std::shared_ptr<bleh::c25519::C25519_Public_Key> m_curve25519_public_key;
@@ -66,6 +87,7 @@ namespace bleh {
 
 	class BlehSSS_Share {
 	public:
+		BlehSSS_Share() = delete;
 		BlehSSS_Share(const std::string& serialized);
 
 		bool verify();
@@ -74,6 +96,7 @@ namespace bleh {
 		bleh::c25519::C25519_Public_Key c_public_key() const;
 
 	private:
+		std::string m_version;
 		std::string m_name;
 
 		std::shared_ptr<bleh::c25519::C25519_Public_Key> m_curve25519_public_key;
@@ -84,89 +107,12 @@ namespace bleh {
 
 	class BlehSSS {
 	public:
-		static std::tuple<bool, std::string> create_shares(const std::string& secret, int shares, int min) {
-			bleh::sss::SSS sss;
-			auto result = sss.share_from_string(secret, shares, min);
-			if (result.is_valid()) {
-				std::stringstream stream;
-				stream << "shares:\n";
-				for (auto&& entry : result.stringify()) {
-					std::cout << "share: " << entry << std::endl;
-					stream << "\t" << entry << '\n';
-				}
-				return { true, stream.str()};
-			}
-			return { false, std::string() };
-		}
-
-		static std::string recreate_shares(const std::vector<std::string>& list) {
-			auto remade = bleh::sss::Share_Collector::from_strings(list);
-			bleh::sss::SSS sss;
-			return sss.combine_string(remade);
-		}
-
-		static std::string create_account(const std::string& name) {
-			auto account = bleh::BlehSSS_Account::create(name);
-			return account.serialize();
-		}
-
-		static std::tuple<std::string, std::string> account_public_export(const std::string& serialized) {
-			bleh::BlehSSS_Account account(serialized);
-			return account.export_public_part();
-		}
-
-		static bool account_public_verify(const std::string& serialized) {
-			bleh::BlehSSS_Handle handle(serialized);
-			return handle.verify();
-		}
-
-		static std::tuple<bool, std::string, std::string> transportable_share(const std::string& share_file, int share_index, const std::string& public_part, const std::string& account) {
-			std::string share;
-			std::string line;
-			std::ifstream file(share_file);
-			if (file.is_open())
-			{
-				int index = 1;
-				while (std::getline(file, line)) {
-					if (line.size() > 1 && line[0] == '\t') {
-						if (index == share_index) {
-							share = line.substr(1);
-							break;
-						}
-						++index;
-					}
-				}
-				file.close();
-			}
-			else {
-				return { false, std::string(), std::string() };
-			}
-			if (!share.empty()) {
-				bleh::BlehSSS_Account account(account);
-				bleh::BlehSSS_Handle handle(public_part);
-				if (handle.verify()) {
-					auto [ct, signature] = account.encrypt(handle.get_c25519_public_key(), share);
-
-					std::stringstream stream;
-					stream << bleh::BlehSSS_Common::property_name << handle.name() << '\n';
-					stream << bleh::BlehSSS_Common::property_ct << ct << '\n';
-					stream << bleh::BlehSSS_Common::property_signature << signature << '\n';
-					stream << bleh::BlehSSS_Common::property_ed25519_public_key << account.ed_public_key().serialized() << '\n';
-					stream << bleh::BlehSSS_Common::property_c25519_public_key << account.c_public_key().serialized() << '\n';
-
-					return { true, stream.str(), handle.name()};
-				}
-			}
-			return { false, std::string(), std::string() };
-		}
-
-		static std::tuple<bool, std::string> decrypt_share(const std::string& account_content, const std::string& share_content) {
-			bleh::BlehSSS_Account account(account_content);
-			bleh::BlehSSS_Share share(share_content);
-			if (share.verify()) {
-				return { true, account.decrypt(share.c_public_key(), share.ct()) };
-			}
-			return { false, std::string() };
-		}
+		static std::tuple<bool, std::string> create_shares(const std::string& secret, int shares, int min);
+		static std::string recreate_shares(const std::vector<std::string>& list);
+		static std::tuple<std::string, BlehSSS_Error> create_account(const std::string& name);
+		static std::tuple<std::string, std::string> account_public_export(const std::string& serialized);
+		static bool account_public_verify(const std::string& serialized);
+		static std::tuple<bool, std::string, std::string> transportable_share(const std::string& share_file, int share_index, const std::string& public_part, const std::string& account);
+		static std::tuple<bool, std::string> decrypt_share(const std::string& account_content, const std::string& share_content);
 	};
 }
