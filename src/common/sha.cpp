@@ -9,18 +9,13 @@
 
 namespace bleh::common {
 
-    std::vector<uint8_t> Sha2::sha256(const std::vector<uint8_t>& in) {
-        auto hash = std::vector<uint8_t>(SHA256_DIGEST_LENGTH, '\0');
-        unsigned int md_len = 0;
-
+    void Sha2::sha256(const unsigned char* in, size_t in_size, unsigned char* out, unsigned int& out_size) {
         auto md = EVP_sha256();
         auto mdctx = EVP_MD_CTX_new();
         EVP_DigestInit_ex(mdctx, md, nullptr);
 
-        EVP_DigestUpdate(mdctx, in.data(), in.size());
-        EVP_DigestFinal_ex(mdctx, reinterpret_cast<unsigned char*>(hash.data()), &md_len);
+        EVP_DigestUpdate(mdctx, in, in_size);
+        EVP_DigestFinal_ex(mdctx, out, &out_size);
         EVP_MD_CTX_free(mdctx);
-
-        return hash;
     }
 }

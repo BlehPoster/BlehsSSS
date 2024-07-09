@@ -28,6 +28,7 @@ add_library(blehsss STATIC
     src/common/random.hpp
     src/common/random.cpp
     src/common/types.h
+    src/common/common.h
     src/common/base64.h
     src/common/base64.cpp
     src/common/sha.h
