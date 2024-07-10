@@ -11,4 +11,10 @@ def run_conan():
     result = subprocess.run(command, capture_output=True, text=True)
     print_result(result)
 
+def run_cmake():
+    command = ['cmake', '-B', 'out']
+    result = subprocess.run(command, capture_output=True, text=True)
+    print_result(result)
+
 run_conan()
+run_cmake()
