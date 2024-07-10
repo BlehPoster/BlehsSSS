@@ -22,9 +22,7 @@ namespace bleh::common {
 
 		template<typename = std::enable_if_t<std::is_same_v<T, uint8_t>>>
 		std::string serialize() {
-			std::string buffer;
-			std::copy(value.begin(), value.end(), std::back_inserter(buffer));
-			return Base64::encode(buffer);
+			return Base64::encode<std::string>(value);
 		}
 
 		template<typename = std::enable_if_t<std::is_same_v<T, uint8_t>>>

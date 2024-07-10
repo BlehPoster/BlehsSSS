@@ -51,7 +51,7 @@ namespace bleh {
 	}
 
 	std::tuple<std::string, BlehSSS_Error> BlehSSS_Account::serialize() {
-		if (BlehSSS_Common::is_supported_export_version(m_version)) {
+		if (!BlehSSS_Common::is_supported_export_version(m_version)) {
 			return { std::string(), BlehSSS_Error("unsupported version") };
 		}
 		std::stringstream stream;

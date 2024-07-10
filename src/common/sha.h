@@ -12,7 +12,12 @@ namespace bleh::common {
     public:
         Sha2() = delete;
 
-        template<typename T, typename = std::enable_if_t<allowed_containers<T>::is_allowed()>>
+        template<typename O, typename T, typename = std::enable_if_t<allowed_containers<T>::is_allowed()>>
+        static T sha256(const T& in) {
+            return sha256<T, O>(in);
+        }
+
+        template<typename T, typename O = T, typename = std::enable_if_t<allowed_containers<T>::is_allowed()>>
         static T sha256(const T& in) {
             static constexpr const auto sha256_size = 32;
 

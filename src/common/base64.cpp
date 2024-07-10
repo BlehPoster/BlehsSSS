@@ -14,6 +14,7 @@ namespace bleh::common {
         b64 = BIO_new(BIO_f_base64());
         bio = BIO_new(BIO_s_mem());
         bio = BIO_push(b64, bio);
+        BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
 
         BIO_write(bio, in, in_size);
         BIO_flush(bio);
@@ -33,6 +34,7 @@ namespace bleh::common {
         b64 = BIO_new(BIO_f_base64());
         bio = BIO_new_mem_buf(in, static_cast<int>(in_size));
         bio = BIO_push(b64, bio);
+        BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
 
         int decoded_size = BIO_read(bio, out, static_cast<int>(out_size));
         out_size = decoded_size;
