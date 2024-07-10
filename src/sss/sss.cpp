@@ -35,7 +35,7 @@ namespace bleh::sss {
 
     int64_t gcd(int64_t a, int64_t b)
     {
-        int temp;
+        int64_t temp;
         while (b != 0)
         {
             temp = a % b;
@@ -214,7 +214,7 @@ namespace bleh::sss {
             for (auto&& e : prepared) {
                 t.push_back({ e.first, e.second[i] });
             }
-            result.push_back(reconstruct_from_shares(t, shares.get_min()));
+            result.push_back(static_cast<char>(reconstruct_from_shares(t, shares.get_min())));
         }
         return result;
     }

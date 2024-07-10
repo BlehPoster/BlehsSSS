@@ -16,12 +16,12 @@ namespace bleh::common {
             return 3 * (len / 4);
         }
 
-        template<typename O, typename T, typename = std::enable_if_t<allowed_containers<T>::is_allowed()>>
+        template<typename O, typename T>
         static O encode(const T& data) {
             return encode<T, O>(data);
         }
 
-        template<typename T, typename O = T, typename = std::enable_if_t<allowed_containers<T>::is_allowed()>>
+        template<typename T, typename O = T, typename = std::enable_if_t<allowed_containers_v<T>>>
         static O encode(const T& data) {
             auto out = O{};
             unsigned int size = static_cast<unsigned int>(data.size());
@@ -33,12 +33,12 @@ namespace bleh::common {
 
         static void base64_encode(const unsigned char* in, unsigned int in_size, unsigned char* out, unsigned int& out_size);
 
-        template<typename O, typename T, typename = std::enable_if_t<allowed_containers<T>::is_allowed()>>
+        template<typename O, typename T>
         static T decode(const T& data) {
             return decode<T, O>(data);
         }
 
-        template<typename T, typename O = T, typename = std::enable_if_t<allowed_containers<T>::is_allowed()>>
+        template<typename T, typename O = T, typename = std::enable_if_t<allowed_containers_v<T>>>
         static T decode(const T& data) {
             auto out = T{};
             unsigned int size = static_cast<unsigned int>(decoded_length(data.size()));
@@ -48,7 +48,8 @@ namespace bleh::common {
             return out;
         }
 
-        static void Base64::base64_decode(const unsigned char* in, unsigned int in_size, unsigned char* out, unsigned int& out_size);
+        static void base64_decode(const unsigned char* in, unsigned int in_size, unsigned char* out, unsigned int& out_size);
+
     };
 
 }
