@@ -19,12 +19,12 @@ namespace bleh::common {
             auto out = T{};
             out.resize(sha256_size);
             unsigned int out_size = 0;
-            sha256(reinterpret_cast<const uint8_t*>(in.data()), in.size(), reinterpret_cast<uint8_t*>(out.data()), out_size);
+            sha256(reinterpret_cast<const uint8_t*>(in.data()), static_cast<unsigned int>(in.size()), reinterpret_cast<uint8_t*>(out.data()), out_size);
             assert(out_size == sha256_size);
             return out;
         }
 
-        static void sha256(const unsigned char* in, size_t in_size, unsigned char* out, unsigned int& out_size);
+        static void sha256(const unsigned char* in, unsigned int in_size, unsigned char* out, unsigned int& out_size);
     };
 
 }

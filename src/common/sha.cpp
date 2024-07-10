@@ -9,7 +9,7 @@
 
 namespace bleh::common {
 
-    void Sha2::sha256(const unsigned char* in, size_t in_size, unsigned char* out, unsigned int& out_size) {
+    void Sha2::sha256(const unsigned char* in, unsigned int in_size, unsigned char* out, unsigned int& out_size) {
         auto md = EVP_sha256();
         auto mdctx = EVP_MD_CTX_new();
         EVP_DigestInit_ex(mdctx, md, nullptr);
