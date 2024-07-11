@@ -1,20 +1,21 @@
 import subprocess
 
-def print_result(result):
-    if len(result.stdout) > 0:
-        print("stdout:", result.stdout)
-    if len(result.stderr) > 0:
-        print("stderr:", result.stderr)
+def run(cmd):
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    for line in iter(p.stdout.readline, b''):
+        print(line)
+    p.stdout.close()
+    p.wait()
 
 def run_conan():
+    print('RUN CONAN')
     command = ['conan', 'install', 'conanfile.txt', '--build=missing']
-    result = subprocess.run(command, capture_output=True, text=True)
-    print_result(result)
+    run(command)
 
 def run_cmake():
+    print('RUN CMAKE')
     command = ['cmake', '-B', 'out']
-    result = subprocess.run(command, capture_output=True, text=True)
-    print_result(result)
+    run(command)
 
 run_conan()
 run_cmake()
