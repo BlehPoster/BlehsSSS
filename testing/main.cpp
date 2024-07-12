@@ -5,31 +5,35 @@
 #include <ecies/ecies.h>
 #include <common/random.hpp>
 
+#include <cassert>
 
 void test_sss() {
     bleh::sss::SSS sss;
-    auto shares = sss.share_from_string("this is a long string used as secret ->>>>> secret", 5, 3);
+
+    constexpr auto share_count = 8;
+    constexpr auto share_min = 2;
+
+    auto share_secret = std::string("Lorem ipsum dolor sit amet");
+
+    auto shares = sss.share_from_string(share_secret, share_count, share_min);
+    assert(share_min == shares.get_min());
 
     auto secret = sss.combine_string(shares);
-
-    std::cout << "from raw share: " << secret << std::endl;
+    assert(secret == share_secret);
 
     auto stringified = shares.stringify();
-    for (auto&& e : stringified) {
-        std::cout << e << std::endl;
-    }
 
-    decltype(stringified) n;
-    for (int i = 0; i < shares.get_min(); ++i) {
-        n.push_back(stringified[i]);
-    }
-    auto&& remade = bleh::sss::Share_Collector::from_strings(n);
-    if (remade.is_valid()) {
+    auto index = 0;
+    while (index + shares.get_min() <= stringified.size() - 1) {
+        decltype(stringified) n;
+        for (int i = index; i - index <= shares.get_min(); ++i) {
+            n.push_back(stringified[i]);
+        }
+        auto&& remade = bleh::sss::Share_Collector::from_strings(n);
+        assert(remade.is_valid());
         auto secret = sss.combine_string(remade);
-        std::cout << "from all serialized shares: " << secret << std::endl;
-    }
-    else {
-        std::cout << "failed to recreate shares" << std::endl;
+        assert(secret == share_secret);
+        ++index;
     }
 }
 
@@ -43,12 +47,7 @@ void test_curve25519_shared_secret() {
     auto ss_a = a.scalar_multiplication_with(B);
     auto ss_b = b.scalar_multiplication_with(A);
 
-    if (ss_a.value == ss_b.value) {
-        std::cout << "successfully created shared secret" << std::endl;
-    }
-    else {
-        std::cout << "failed to created shared secret" << std::endl;
-    }
+    assert(ss_a.value == ss_b.value);
 }
 
 void test_curve25519_serialize() {
@@ -67,12 +66,7 @@ void test_curve25519_serialize() {
     auto ss_a = ra.scalar_multiplication_with(B);
     auto ss_b = b.scalar_multiplication_with(rA);
 
-    if (ss_a.value == ss_b.value) {
-        std::cout << "successfully created shared secret from serialized" << std::endl;
-    }
-    else {
-        std::cout << "failed to created shared secret from serialized" << std::endl;
-    }
+    assert(ss_a.value == ss_b.value);
 }
 
 void test_ed25519_sign() {
@@ -83,12 +77,7 @@ void test_ed25519_sign() {
 
     auto sign = priv.sign(test);
 
-    if (pub.verify(sign, test)) {
-        std::cout << "ed25519 verification success" << std::endl;
-    }
-    else {
-        std::cout << "ed25519 verification failed" << std::endl;
-    }
+    assert(pub.verify(sign, test));
 }
 
 void test_ed25519_serialize() {
@@ -104,12 +93,7 @@ void test_ed25519_serialize() {
     auto s_pub = pub.serialized();
     auto d_pub = bleh::ed25519::ED25519_Public_Key::from_serialized(s_pub);
 
-    if (d_pub.verify(sign, test)) {
-        std::cout << "ed25519 verification success from serialized" << std::endl;
-    }
-    else {
-        std::cout << "ed25519 verification failed from serialized" << std::endl;
-    }
+    assert(d_pub.verify(sign, test));
 }
 
 void test_ecies() {
@@ -126,25 +110,17 @@ void test_ecies() {
     auto[ct, iv] = ss_a.encrypt(pt);
     auto rpt = ss_b.decrypt(ct, iv);
 
-    if (rpt == pt) {
-        std::cout << "ecies encrypt/decrypt success" << std::endl;
-    }
-    else {
-        std::cout << "ecies encrypt/decrypt failed" << std::endl;
-    }
+    assert(rpt == pt);
 }
 
 int main(int argc, const char** argv) {
     test_sss();
-    std::cout << "#######" << std::endl;
     test_curve25519_shared_secret();
-    std::cout << "#######" << std::endl;
     test_curve25519_serialize();
-    std::cout << "#######" << std::endl;
     test_ed25519_sign();
-    std::cout << "#######" << std::endl;
     test_ed25519_serialize();
-    std::cout << "#######" << std::endl;
     test_ecies();
+
+    std::cout << "no errors found" << std::endl;
     return 0;
 }

@@ -1,3 +1,5 @@
+MKDIR data
+
 rem create shares
 ..\out\Debug\cli.exe sss-share --secret="hallo world" --shares=5 --min=2 --out=data\shares.dat
 rem recreate to check if the shares are valid

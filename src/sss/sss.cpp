@@ -97,7 +97,7 @@ namespace bleh::sss {
             ss << std::hex << 0x01 << e.first << min;
 
             for (auto&& c : e.second) {
-                static auto ins = [&](auto&& x) {
+                auto ins = [&](auto&& x) {
                     if (x < 0x10) {
                         ss << '0';
                     }
@@ -141,7 +141,7 @@ namespace bleh::sss {
                     min = h - '0';
                 }
                 else {
-                    static auto g = [&]() -> int64_t {
+                    auto g = [&]() -> int64_t {
                         char h, l;
                         iss >> h >> l;
                         std::stringstream tss;
@@ -215,6 +215,9 @@ namespace bleh::sss {
                 t.push_back({ e.first, e.second[i] });
             }
             result.push_back(static_cast<char>(reconstruct_from_shares(t, shares.get_min())));
+        }
+        if (result[result.size()-1] == '\0') {
+            result = result.substr(0, result.size() -1);
         }
         return result;
     }
