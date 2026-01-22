@@ -9,13 +9,14 @@ def run(cmd):
 
 def run_conan():
     print('RUN CONAN')
-    command = ['conan', 'install', 'conanfile.txt', '--build=missing']
+    command = ['conan', 'install', 'conanfile.txt', '--build=missing', '-s', 'build_type=Debug']
     run(command)
 
 def run_cmake():
     print('RUN CMAKE')
-    command = ['cmake', '-B', 'out']
+    command = [ 'cmake', '--preset', 'conan-default' ]
     run(command)
+
 
 run_conan()
 run_cmake()

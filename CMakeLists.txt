@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
+
+cmake_policy(SET CMP0091 NEW)
+
 project(blehsss)
 
 add_library(c25519 STATIC
@@ -56,9 +59,11 @@ add_executable(cli
 find_package(ZLIB REQUIRED  HINTS build/generators)
 find_package(OpenSSL REQUIRED HINTS build/generators)
 
-include_directories(.)
-include_directories(src)
-include_directories(deps/)
+target_include_directories(blehsss PUBLIC
+    .
+    src
+    deps
+)
 
 target_compile_features(c25519 PRIVATE cxx_std_17)
 target_compile_features(aes PRIVATE cxx_std_17)
@@ -66,6 +71,28 @@ target_compile_features(blehsss PRIVATE cxx_std_17)
 target_compile_features(test PRIVATE cxx_std_17)
 target_compile_features(cli PRIVATE cxx_std_17)
 
-target_link_libraries(blehsss PRIVATE c25519 aes ZLIB::ZLIB openssl::openssl)
-target_link_libraries(test PRIVATE blehsss c25519 aes ZLIB::ZLIB openssl::openssl)
-target_link_libraries(cli PRIVATE blehsss c25519 aes ZLIB::ZLIB openssl::openssl)
+target_link_libraries(blehsss PRIVATE
+    c25519
+    aes
+    ZLIB::ZLIB
+    OpenSSL::SSL
+    OpenSSL::Crypto
+)
+
+target_link_libraries(test PRIVATE
+    blehsss
+    c25519
+    aes
+    ZLIB::ZLIB
+    OpenSSL::SSL
+    OpenSSL::Crypto
+)
+
+target_link_libraries(cli PRIVATE
+    blehsss
+    c25519
+    aes
+    ZLIB::ZLIB
+    OpenSSL::SSL
+    OpenSSL::Crypto
+)
