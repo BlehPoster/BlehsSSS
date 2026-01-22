@@ -1,6 +1,7 @@
 #include "sss.h"
 
 #include <common/random.hpp>
+#include <common/base64.h>
 
 #include <numeric>
 #include <unordered_map>
@@ -90,24 +91,32 @@ namespace bleh::sss {
     }
 
     std::vector<std::string> Share_Collector::stringify() const {
-        decltype(stringify()) r;
-        for (auto&& e : data) {
-            
-            std::stringstream ss;
-            ss << std::hex << 0x01 << e.first << min;
+        std::vector<std::string> r;
 
-            for (auto&& c : e.second) {
-                auto ins = [&](auto&& x) {
-                    if (x < 0x10) {
-                        ss << '0';
-                    }
-                    ss << x;
-                };
-                ins(c & 0x000000FF);
-                ins((c & 0x0000FF00) >> 8);
-                ins((c & 0x00FF0000) >> 16);
-                ins((c & 0xFF000000) >> 24);
+        for (const auto& [index, values] : data) {
+            std::stringstream ss;
+            ss << "01:" << index << ":" << min << ":";
+
+            std::vector<uint8_t> bytes;
+            bytes.reserve(values.size() * sizeof(int64_t));
+
+            for (int64_t v : values) {
+                for (int i = 0; i < 8; ++i)
+                    bytes.push_back((v >> (i * 8)) & 0xFF);
             }
+
+            unsigned int out_len = bleh::common::Base64::encoded_length(bytes.size());
+            std::string encoded(out_len, '\0');
+
+            bleh::common::Base64::base64_encode(
+                bytes.data(),
+                bytes.size(),
+                reinterpret_cast<unsigned char*>(encoded.data()),
+                out_len
+            );
+
+            encoded.resize(out_len);
+            ss << encoded;
 
             r.push_back(ss.str());
         }
@@ -115,49 +124,69 @@ namespace bleh::sss {
     }
 
     Share_Collector Share_Collector::from_strings(const std::vector<std::string>& strings) {
-        DataType r;
-        int32_t min = 0;
-        for (auto&& str : strings) {
-            std::istringstream iss(str);
-            int index = 0;
-            char h = 0;
+        DataType result;
+        int32_t min = -1;
+
+        for (const auto& str : strings) {
+            std::vector<std::string> parts;
+            {
+                std::stringstream ss(str);
+                std::string item;
+                while (std::getline(ss, item, ':')) {
+                    parts.push_back(item);
+                }
+            }
+
+            if (parts.size() != 4) {
+                return { {}, 0 };
+            }
+
+            if (parts[0] != "01") {
+                return { {}, 0 };
+            }
 
             int32_t share_index = 0;
-            auto e = std::vector<int64_t>();
-
-            while (iss) {
-                if (index == 0) {
-                    iss >> std::hex >> h;
-                    if ((h - '0') != 0x01) {
-                        return { {}, 0 };
-                    }
-                }
-                else if (index == 1) {
-                    iss >> h;
-                    share_index = h - '0';
-                }
-                else if(index == 2) {
-                    iss >> h;
-                    min = h - '0';
-                }
-                else {
-                    auto g = [&]() -> int64_t {
-                        char h, l;
-                        iss >> h >> l;
-                        std::stringstream tss;
-                        tss << std::hex << h << l;
-                        int r;
-                        tss >> r;
-                        return r;
-                    };
-                    auto v = g() | (g() << 8) | (g() << 16) | (g() << 24);
-                    e.push_back(v);
-                }
-                ++index;
+            int32_t local_min = 0;
+            try {
+                share_index = std::stoi(parts[1]);
+                local_min = std::stoi(parts[2]);
             }
-            r[share_index] = e;
+            catch (...) {
+                return { {}, 0 };
+            }
+
+            if (min == -1) {
+                min = local_min;
+            }
+            else if (min != local_min) {
+                return { {}, 0 };
+            }
+
+            std::string& encoded = parts[3];
+            std::vector<uint8_t> decoded(bleh::common::Base64::decoded_length(encoded.size()));
+
+            unsigned int decoded_len = decoded.size();
+            bleh::common::Base64::base64_decode(reinterpret_cast<const unsigned char*>(encoded.data()), encoded.size(), decoded.data(), decoded_len);
+
+            if (decoded_len % sizeof(int64_t) != 0) {
+                return { {}, 0 };
+            }
+
+            std::vector<int64_t> values;
+            values.reserve(decoded_len / sizeof(int64_t));
+
+            for (size_t i = 0; i < decoded_len; i += 8) {
+                int64_t v = 0;
+                for (int b = 0; b < 8; ++b) {
+                    v |= static_cast<int64_t>(decoded[i + b]) << (b * 8);
+                }
+                values.push_back(v);
+            }
+
+            result[share_index] = std::move(values);
         }
-        return { r, min };
+
+        return { result, min };
     }
 
     bool Share_Collector::is_valid() const {
